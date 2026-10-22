@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Warna default material design purple -->
+    <color name="purple_500">#FF6200EE</color>
+    
+    <!-- Warna utama aplikasi (maroon) -->
+    <color name="primary">#FF5C1C3B</color>
+    <color name="primary_dark">#FF3A1026</color>
+    <color name="accent">#FFFF4081</color>
+    
+    <!-- Warna untuk notifikasi -->
+    <color name="notification_color">#FF5C1C3B</color>
+</resources>

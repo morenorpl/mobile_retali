@@ -1,0 +1,81 @@
+name: mobile_retali
+description: "A new Flutter project."
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  http: ^1.2.2
+  shared_preferences: ^2.2.2
+  mobile_scanner: ^5.2.1
+  permission_handler: ^11.3.1
+  dio: ^5.7.0
+  intl: ^0.19.0
+  marquee: ^2.2.3
+
+  # Firebase / FCM
+  firebase_core: ^3.4.0
+  firebase_messaging: ^15.0.3
+  flutter_local_notifications: ^17.2.1
+
+  audioplayers: ^5.2.1
+  image_picker: ^1.1.2
+  geolocator: ^13.0.1
+  url_launcher: ^6.3.0
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_launcher_icons: ^0.13.1
+  flutter_lints: ^5.0.0
+
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/LogoZero.png
+    - assets/LogoRetali.png
+
+    - assets/home/absensi_jamaah.png
+    - assets/home/al quran.png
+    - assets/home/ceklis tugas.png
+    - assets/home/destinasi sejarah.png
+    - assets/home/dzikir dan doa.png
+    - assets/home/fiqih umrah.png
+    - assets/home/info praktis.png
+    - assets/home/itinerary perjalanan.png
+    - assets/home/konten.png
+    - assets/home/panduan umrah.png
+    - assets/home/persiapan umrah.png
+    - assets/home/prosedur perjalanan.png
+    - assets/home/tugas tour leader.png
+    - assets/home/Bagian Waktu.png
+    - assets/home/ibadah.png
+    - assets/home/kesehatan.png
+
+    - assets/diniyah/teknis.png
+    - assets/diniyah/diniyah.png
+    - assets/diniyah/Jamaah Umrah Tamu Allah.png
+    - assets/diniyah/Bersabar.png
+    - assets/diniyah/Ikhlas.png
+    - assets/diniyah/Teladan.png
+    - assets/diniyah/Jangan Berdebat.png
+    - assets/diniyah/Hindari Maksiat Agar Mabrur.png
+    - assets/diniyah/Keutamaan Umrah.png
+    - assets/sound/Barcode scan.mp3
+
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: assets/icon/LogoRetali.png
