@@ -16,7 +16,7 @@ class ScanService {
     // ===============================
     // SUCCESS
     // ===============================
-    if (res['status'] == 'success') {
+    if (res['status'] == 'success' || res['success'] == true) {
       final data = (res['data'] is Map<String, dynamic>)
           ? res['data'] as Map<String, dynamic>
           : <String, dynamic>{};
@@ -27,13 +27,16 @@ class ScanService {
     // ===============================
     // DUPLICATE (409)
     // ===============================
-    if (res['status'] == 'error' && res['code'] == 409) {
+    if (res['code'] == 409 ||
+        (res['status'] == 'error' &&
+            (res['message']?.toString().toLowerCase().contains('sudah') ==
+                true))) {
       final data = (res['data'] is Map<String, dynamic>)
           ? res['data'] as Map<String, dynamic>
           : <String, dynamic>{};
 
       return ScanResult.duplicate(
-        data['passport_number']?.toString() ?? '',
+        (data['passport_number'] ?? '').toString(),
         data,
         res['message'] ?? 'Paspor sudah pernah discan',
       );
@@ -48,7 +51,7 @@ class ScanService {
   }
 
   // ===============================
-  // SCAN KOPER (TIDAK DIUBAH)
+  // SCAN KOPER
   // ===============================
   Future<ScanResult> scanKoper({
     required String qrRaw,
@@ -59,7 +62,7 @@ class ScanService {
     // ===============================
     // SUCCESS
     // ===============================
-    if (res['status'] == 'success') {
+    if (res['status'] == 'success' || res['success'] == true) {
       final data = (res['data'] is Map<String, dynamic>)
           ? res['data'] as Map<String, dynamic>
           : <String, dynamic>{};
@@ -70,19 +73,21 @@ class ScanService {
     // ===============================
     // DUPLICATE (409)
     // ===============================
-    if (res['status'] == 'error' && res['code'] == 409) {
+    if (res['code'] == 409 ||
+        (res['status'] == 'error' &&
+            (res['message']?.toString().toLowerCase().contains('sudah') ==
+                true))) {
       final data = (res['data'] is Map<String, dynamic>)
           ? res['data'] as Map<String, dynamic>
           : <String, dynamic>{};
 
       return ScanResult.duplicate(
-        data['koper_code']?.toString() ?? '',
+        (data['koper_code'] ?? data['kode_koper'] ?? '').toString(),
         data,
         res['message'] ?? 'Koper sudah pernah discan',
       );
     }
 
-    
     // ===============================
     // OTHER ERROR
     // ===============================

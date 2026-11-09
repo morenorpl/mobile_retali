@@ -30,8 +30,23 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String _name = "";
   int _unreadCount = 0;
-  String _role = "tourleader";
+  String _role = "tour_leader";
   final ScrollController _scrollController = ScrollController();
+
+  String get _roleDisplay {
+    final clean = _role.toLowerCase().replaceAll('_', ' ').trim();
+    if (clean == 'muthawif') {
+      return 'Muthawif';
+    } else if (clean == 'tour leader' || clean == 'tourleader') {
+      return 'Tour Leader';
+    } else if (clean.isNotEmpty) {
+      return clean
+          .split(' ')
+          .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '')
+          .join(' ');
+    }
+    return 'Tour Leader';
+  }
 
   @override
   void initState() {
@@ -51,8 +66,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       _name = prefs.getString("name") ?? "";
-      _role = prefs.getString("role") ?? "tourleader";
+      _role = prefs.getString("role") ?? "tour_leader";
     });
+
+    try {
+      final info = await ApiService.getUserInfo();
+      if (info.isNotEmpty && mounted) {
+        final updatedName = prefs.getString("name") ?? _name;
+        final updatedRole = prefs.getString("role") ?? _role;
+        if (updatedName != _name || updatedRole != _role) {
+          setState(() {
+            _name = updatedName;
+            _role = updatedRole;
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadUnread() async {
@@ -93,18 +122,22 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     ];
 
-    if (_role == 'tourleader') {
+    final normalizedRole = _role.toLowerCase().replaceAll('_', '').trim();
+    if (normalizedRole == 'tourleader' || normalizedRole == 'muthawif') {
       baseMenus.addAll([
         {"img": "assets/home/ceklis tugas.png", "label": "Ceklis\nTugas"},
         {
           "img": "assets/home/itinerary perjalanan.png",
           "label": "Itinerary\nPerjalanan",
         },
-        {
+      ]);
+
+      if (normalizedRole == 'tourleader') {
+        baseMenus.add({
           "img": "assets/home/tugas tour leader.png",
           "label": "Tugas\nTour Leader",
-        },
-      ]);
+        });
+      }
     }
 
     return baseMenus;
@@ -153,9 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            _role == 'muthawif'
-                                ? "Anda masuk sebagai Muthawif"
-                                : "Anda masuk sebagai Tour Leader",
+                            "Anda masuk sebagai $_roleDisplay",
                             style: const TextStyle(
                               fontSize: 13,
                               color: Colors.white70,

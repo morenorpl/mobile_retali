@@ -82,6 +82,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
 
     if (success) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Berhasil dihapus")),
       );
@@ -136,21 +137,82 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: FutureBuilder<List<dynamic>>(
               future: _futureScans,
               builder: (context, snapshot) {
-                if (snapshot.connectionState ==
-                    ConnectionState.waiting) {
-                  return const Center(
-                      child: CircularProgressIndicator());
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return RefreshIndicator(
+                    onRefresh: () async => _loadData(),
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Container(
+                        padding: const EdgeInsets.all(32),
+                        alignment: Alignment.center,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+                            const SizedBox(height: 12),
+                            Text(
+                              "Gagal memuat data: ${snapshot.error}",
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.black87),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: _loadData,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text("Coba Lagi"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _mainColor,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
                 }
 
                 final scans = snapshot.data ?? [];
 
                 if (scans.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      "Belum ada riwayat scan",
-                      style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey),
+                  return RefreshIndicator(
+                    onRefresh: () async => _loadData(),
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Container(
+                        height: 400,
+                        alignment: Alignment.center,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _type == HistoryType.koper ? Icons.luggage_outlined : Icons.badge_outlined,
+                              size: 56,
+                              color: Colors.grey.shade400,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              "Belum ada riwayat scan ${_type == HistoryType.koper ? 'koper' : 'paspor'}",
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "Tarik ke bawah untuk memuat ulang",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   );
                 }
@@ -158,52 +220,41 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 return RefreshIndicator(
                   onRefresh: () async => _loadData(),
                   child: ListView.builder(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    physics: const AlwaysScrollableScrollPhysics(),
                     itemCount: scans.length,
                     itemBuilder: (context, index) {
                       final scan =
                           scans[index] as Map<String, dynamic>;
 
-                      final kode = _type ==
-                              HistoryType.koper
-                          ? scan['koper_code']
-                          : scan['passport_number'];
+                      final kode = _type == HistoryType.koper
+                          ? (scan['koper_code'] ?? scan['kode_koper'])
+                          : (scan['passport_number'] ?? scan['passport']);
+
+                      final nama = scan['owner_name'] ?? scan['nama_pemilik'] ?? '-';
+                      final phone = scan['owner_phone'] ?? scan['phone'] ?? scan['nomor_telepon'] ?? '-';
+                      final kloter = scan['kloter'] ?? '-';
+                      final waktu = scan['scanned_at'] ?? scan['created_at'] ?? '';
 
                       return _ModernCard(
                         type: _type,
                         kode: kode?.toString() ?? '-',
-                        nama:
-                            scan['owner_name'] ?? '-',
-                        kloter:
-                            scan['kloter'] ?? '-',
-                        waktu:
-                            scan['scanned_at'] ?? '',
-                        formatDateTime:
-                            _formatDateTime,
-                        onDelete: () =>
-                            _deleteItem(scan),
+                        nama: nama.toString(),
+                        kloter: kloter.toString(),
+                        waktu: waktu.toString(),
+                        formatDateTime: _formatDateTime,
+                        onDelete: () => _deleteItem(scan),
                         onDetail: () {
-                          if (_type ==
-                              HistoryType.koper) {
+                          if (_type == HistoryType.koper) {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) =>
-                                    KoperDetailScreen(
-                                  kode: kode ?? '',
-                                  namaPemilik:
-                                      scan['owner_name'] ??
-                                          '-',
-                                  phone:
-                                      scan['owner_phone'] ??
-                                          '-',
-                                  timestamp:
-                                      scan['scanned_at'] ??
-                                          '',
-                                  kloter:
-                                      scan['kloter'] ??
-                                          '-',
+                                builder: (_) => KoperDetailScreen(
+                                  kode: kode?.toString() ?? '',
+                                  namaPemilik: nama.toString(),
+                                  phone: phone.toString(),
+                                  timestamp: waktu.toString(),
+                                  kloter: kloter.toString(),
                                 ),
                               ),
                             );
@@ -211,22 +262,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) =>
-                                    PasporDetailScreen(
-                                  passportNumber:
-                                      kode ?? '',
-                                  namaPemilik:
-                                      scan['owner_name'] ??
-                                          '-',
-                                  phone:
-                                      scan['owner_phone'] ??
-                                          '-',
-                                  timestamp:
-                                      scan['scanned_at'] ??
-                                          '',
-                                  kloter:
-                                      scan['kloter'] ??
-                                          '-',
+                                builder: (_) => PasporDetailScreen(
+                                  passportNumber: kode?.toString() ?? '',
+                                  namaPemilik: nama.toString(),
+                                  phone: phone.toString(),
+                                  timestamp: waktu.toString(),
+                                  kloter: kloter.toString(),
                                 ),
                               ),
                             );

@@ -5,6 +5,7 @@ import 'package:audioplayers/audioplayers.dart';
 
 import 'package:mobile_retali/helpers/permission_helper.dart';
 import 'package:mobile_retali/services/scan_service.dart';
+import 'riwayat_scan/history_screen.dart';
 
 enum ScanMode { koper, paspor }
 
@@ -31,7 +32,7 @@ class _ScanScreenState extends State<ScanScreen> {
     super.initState();
 
     _cameraController = MobileScannerController(
-      detectionSpeed: DetectionSpeed.normal, // ✅ WAJIB
+      detectionSpeed: DetectionSpeed.normal,
       autoStart: true,
     );
 
@@ -50,16 +51,18 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   Future<void> _playSuccess() async {
-    await _playerOk.play(
-      AssetSource('sound/Barcode scan.mp3'),
-    );
+    try {
+      await _playerOk.play(
+        AssetSource('sound/Barcode scan.mp3'),
+      );
+    } catch (_) {}
   }
 
   String _firstField(String raw) => raw.split('|').first.trim();
 
   bool _isPassportQR(String raw) {
     final first = _firstField(raw);
-    return RegExp(r'^[A-Z]{1,2}[0-9]{6,9}$').hasMatch(first);
+    return RegExp(r'^[A-Z]{1,2}[0-9]{6,9}$', caseSensitive: false).hasMatch(first);
   }
 
   bool _isJsonPassport(String raw) {
@@ -74,11 +77,24 @@ class _ScanScreenState extends State<ScanScreen> {
     }
   }
 
+  bool _isJsonKoper(String raw) {
+    try {
+      final j = jsonDecode(raw);
+      return j is Map &&
+          (j.containsKey('kode_koper') ||
+              j.containsKey('koper_code') ||
+              j.containsKey('koper'));
+    } catch (_) {
+      return false;
+    }
+  }
+
   bool _isKoperQR(String raw) {
+    if (_isJsonKoper(raw)) return true;
+    if (_isPassportQR(raw) || _isJsonPassport(raw)) return false;
     final parts = raw.split('|').map((e) => e.trim()).toList();
-    if (parts.length < 3) return false;
-    if (_isPassportQR(raw)) return false;
-    if (parts.first.length > 10) return false;
+    if (parts.length >= 2) return true;
+    if (parts.length == 1 && parts.first.isNotEmpty && parts.first.length <= 15) return true;
     return true;
   }
 
@@ -97,20 +113,23 @@ class _ScanScreenState extends State<ScanScreen> {
 
     if (_mode == ScanMode.koper) {
       if (_isPassportQR(cleaned) || _isJsonPassport(cleaned)) {
-        _showStatus("❌ QR PASPOR TERDETEKSI", Colors.red);
+        _showStatus("❌ QR PASPOR TERDETEKSI\n(Ganti mode ke Scan Paspor)", Colors.red);
+        await Future.delayed(const Duration(milliseconds: 1000));
         _unlockScan();
         return;
       }
       if (!_isKoperQR(cleaned)) {
         _showStatus("❌ FORMAT QR KOPER TIDAK VALID", Colors.red);
+        await Future.delayed(const Duration(milliseconds: 1000));
         _unlockScan();
         return;
       }
     }
 
     if (_mode == ScanMode.paspor) {
-      if (!_isPassportQR(cleaned) && !_isJsonPassport(cleaned)) {
-        _showStatus("❌ QR BUKAN PASPOR", Colors.red);
+      if (_isJsonKoper(cleaned)) {
+        _showStatus("❌ QR KOPER TERDETEKSI\n(Ganti mode ke Scan Koper)", Colors.red);
+        await Future.delayed(const Duration(milliseconds: 1000));
         _unlockScan();
         return;
       }
@@ -122,11 +141,11 @@ class _ScanScreenState extends State<ScanScreen> {
       } else {
         await _handleScanPaspor(cleaned);
       }
-    } catch (_) {
-      _showStatus("❌ GAGAL MEMPROSES QR", Colors.red);
+    } catch (e) {
+      _showStatus("❌ GAGAL MEMPROSES QR: $e", Colors.red);
     }
 
-    await Future.delayed(const Duration(milliseconds: 350));
+    await Future.delayed(const Duration(milliseconds: 600));
     _unlockScan();
   }
 
@@ -135,29 +154,44 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   Future<void> _handleScanKoper(String raw) async {
-    final result = await _scanService.scanKoper(qrRaw: raw);
-    if (result.success) {
-      await _playSuccess();
-      _showStatus("✅ SCAN KOPER BERHASIL", Colors.green);
-    } else {
-      _showStatus("⚠️ KOPER SUDAH DISCAN", Colors.orange);
+    try {
+      final result = await _scanService.scanKoper(qrRaw: raw);
+      if (result.success) {
+        await _playSuccess();
+        final display = result.ownerName != null && result.ownerName != '-'
+            ? "${result.code} - ${result.ownerName}"
+            : result.code;
+        _showStatus("✅ SCAN KOPER BERHASIL\n$display", Colors.green);
+      } else {
+        _showStatus("⚠️ KOPER SUDAH DISCAN\n${result.code}", Colors.orange);
+      }
+    } catch (e) {
+      _showStatus("❌ GAGAL SCAN KOPER: $e", Colors.red);
     }
   }
 
   Future<void> _handleScanPaspor(String raw) async {
-    final result = await _scanService.scanPassport(qrRaw: raw);
-    if (result.success) {
-      await _playSuccess();
-      _showStatus("✅ SCAN PASPOR BERHASIL", Colors.green);
-    } else {
-      _showStatus("⚠️ PASPOR SUDAH DISCAN", Colors.orange);
+    try {
+      final result = await _scanService.scanPassport(qrRaw: raw);
+      if (result.success) {
+        await _playSuccess();
+        final display = result.ownerName != null && result.ownerName != '-'
+            ? "${result.code} - ${result.ownerName}"
+            : result.code;
+        _showStatus("✅ SCAN PASPOR BERHASIL\n$display", Colors.green);
+      } else {
+        _showStatus("⚠️ PASPOR SUDAH DISCAN\n${result.code}", Colors.orange);
+      }
+    } catch (e) {
+      _showStatus("❌ GAGAL SCAN PASPOR: $e", Colors.red);
     }
   }
 
   void _showStatus(String message, Color color) {
+    if (!mounted) return;
     setState(() {
       _statusMessage = message;
-      _statusColor = color.withOpacity(0.85);
+      _statusColor = color.withValues(alpha: 0.85);
     });
   }
 
@@ -187,34 +221,64 @@ class _ScanScreenState extends State<ScanScreen> {
                 onDetect: _onDetect,
               ),
 
+              // Header bar
               Positioned(
                 top: 40,
-                left: 20,
-                right: 20,
+                left: 16,
+                right: 16,
                 child: Column(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        _mode == ScanMode.koper
-                            ? "📦 SCAN KOPER – ARAHKAN KE QR"
-                            : "📘 SCAN PASPOR – ARAHKAN KE QR",
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: Colors.black45,
+                          child: IconButton(
+                            icon: const Icon(Icons.arrow_back, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              _mode == ScanMode.koper
+                                  ? "📦 SCAN KOPER"
+                                  : "📘 SCAN PASPOR",
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        CircleAvatar(
+                          backgroundColor: Colors.black45,
+                          child: IconButton(
+                            icon: const Icon(Icons.history, color: Colors.white),
+                            tooltip: "Riwayat Scan",
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const HistoryScreen()),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                     if (_statusMessage != null)
                       Padding(
-                        padding: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.only(top: 10),
                         child: Container(
+                          width: double.infinity,
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: _statusColor,
@@ -222,6 +286,7 @@ class _ScanScreenState extends State<ScanScreen> {
                           ),
                           child: Text(
                             _statusMessage!,
+                            textAlign: TextAlign.center,
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold),
@@ -232,6 +297,7 @@ class _ScanScreenState extends State<ScanScreen> {
                 ),
               ),
 
+              // Box scanner
               Center(
                 child: Container(
                   width: 250,
@@ -239,38 +305,67 @@ class _ScanScreenState extends State<ScanScreen> {
                   decoration: BoxDecoration(
                     border: Border.all(
                       color: _mode == ScanMode.koper
-                          ? Colors.blue
-                          : Colors.red,
+                          ? const Color(0xFF842D62)
+                          : Colors.blueAccent,
                       width: 3,
                     ),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
               ),
 
+              // Bottom Actions
               Positioned(
                 bottom: 40,
+                left: 20,
                 right: 20,
-                child: FloatingActionButton.extended(
-                  backgroundColor:
-                      _mode == ScanMode.koper ? Colors.red : Colors.blue,
-                  icon: Icon(
-                    _mode == ScanMode.koper
-                        ? Icons.document_scanner
-                        : Icons.inventory_2,
-                  ),
-                  label: Text(
-                    _mode == ScanMode.koper
-                        ? "Scan Paspor"
-                        : "Scan Koper",
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _mode = _mode == ScanMode.koper
-                          ? ScanMode.paspor
-                          : ScanMode.koper;
-                    });
-                  },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    FloatingActionButton.extended(
+                      heroTag: 'btnHistory',
+                      backgroundColor: Colors.black54,
+                      icon: const Icon(Icons.history, color: Colors.white),
+                      label: const Text(
+                        "History",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const HistoryScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    FloatingActionButton.extended(
+                      heroTag: 'btnToggleMode',
+                      backgroundColor: _mode == ScanMode.koper
+                          ? Colors.blueAccent
+                          : const Color(0xFF842D62),
+                      icon: Icon(
+                        _mode == ScanMode.koper
+                            ? Icons.document_scanner
+                            : Icons.inventory_2,
+                        color: Colors.white,
+                      ),
+                      label: Text(
+                        _mode == ScanMode.koper
+                            ? "Ke Scan Paspor"
+                            : "Ke Scan Koper",
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _mode = _mode == ScanMode.koper
+                              ? ScanMode.paspor
+                              : ScanMode.koper;
+                          _statusMessage = null;
+                        });
+                      },
+                    ),
+                  ],
                 ),
               ),
             ],

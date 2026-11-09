@@ -7,7 +7,7 @@ import '../../services/api_service.dart';
 import '../../models/checklist_models.dart';
 
 class ChecklistDetailScreen extends StatefulWidget {
-  final int checklistId;
+  final dynamic checklistId;
   final String? title;
 
   const ChecklistDetailScreen({
@@ -72,7 +72,7 @@ class _ChecklistDetailScreenState extends State<ChecklistDetailScreen> {
   }
 
   // ================= LOCAL DRAFT =================
-  Future<void> _saveProgress(int checklistId) async {
+  Future<void> _saveProgress(dynamic checklistId) async {
     if (_submitted) return;
 
     final prefs = await SharedPreferences.getInstance();
@@ -87,7 +87,7 @@ class _ChecklistDetailScreenState extends State<ChecklistDetailScreen> {
     prefs.setString('checklist_progress_$checklistId', jsonEncode(data));
   }
 
-  Future<void> _loadProgress(int checklistId, ChecklistDetail detail) async {
+  Future<void> _loadProgress(dynamic checklistId, ChecklistDetail detail) async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString('checklist_progress_$checklistId');
     if (saved == null) return;

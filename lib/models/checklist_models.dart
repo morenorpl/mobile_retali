@@ -1,11 +1,15 @@
 // lib/models/checklist_models.dart
 class ChecklistSummary {
-  final int id;
+  final dynamic id;
   final String title;
   final DateTime opensAt;
   final DateTime closesAt;
   final String status; // 'belum_dibuka' | 'dibuka' | 'ditutup'
   final DateTime? doneAt;
+  final String? taskId;
+  final String? assignmentId;
+  final String? recipientId;
+  final String? assignmentStatus;
 
   ChecklistSummary({
     required this.id,
@@ -14,31 +18,75 @@ class ChecklistSummary {
     required this.closesAt,
     required this.status,
     this.doneAt,
+    this.taskId,
+    this.assignmentId,
+    this.recipientId,
+    this.assignmentStatus,
   });
 
   // getter tambahan biar mudah
-  bool get submitted => doneAt != null;
+  bool get submitted =>
+      doneAt != null ||
+      assignmentStatus == 'completed' ||
+      assignmentStatus == 'submitted';
   bool get canWork => status == 'dibuka' && !submitted;
 
-  factory ChecklistSummary.fromJson(Map<String, dynamic> j) => ChecklistSummary(
-        id: j['id'] as int,
-        title: j['title'] as String,
-        opensAt: DateTime.parse(j['opens_at']).toLocal(),
-        closesAt: DateTime.parse(j['closes_at']).toLocal(),
-        status: j['status'] as String,
-        doneAt: j['done_at'] != null
-            ? DateTime.parse(j['done_at']).toLocal()
-            : null,
-      );
+  factory ChecklistSummary.fromJson(Map<String, dynamic> j) {
+    DateTime parseDate(dynamic val, DateTime fallback) {
+      if (val == null) return fallback;
+      try {
+        return DateTime.parse(val.toString()).toLocal();
+      } catch (_) {
+        return fallback;
+      }
+    }
 
-  // ✅ Tambahkan method copyWith
+    final opens = parseDate(j['opens_at'], DateTime.now());
+    final closes = parseDate(
+        j['closes_at'], DateTime.now().add(const Duration(days: 7)));
+
+    final now = DateTime.now();
+    String st = (j['status'] ?? 'dibuka').toString().toLowerCase();
+    if (st == 'published' || st == 'active' || st == 'dibuka') {
+      if (now.isBefore(opens)) {
+        st = 'belum_dibuka';
+      } else if (now.isAfter(closes)) {
+        st = 'ditutup';
+      } else {
+        st = 'dibuka';
+      }
+    }
+
+    final doneAtVal = j['done_at'] ?? j['submitted_at'];
+    final done = doneAtVal != null ? parseDate(doneAtVal, DateTime.now()) : null;
+
+    final assignStatus = (j['assignment_status'] ?? j['status'])?.toString();
+
+    return ChecklistSummary(
+      id: j['id'],
+      title: (j['title'] ?? 'Checklist') as String,
+      opensAt: opens,
+      closesAt: closes,
+      status: st,
+      doneAt: done,
+      taskId: j['task_id']?.toString(),
+      assignmentId: (j['assignment_id'] ?? j['id'])?.toString(),
+      recipientId: j['recipient_id']?.toString(),
+      assignmentStatus: assignStatus,
+    );
+  }
+
   ChecklistSummary copyWith({
-    int? id,
+    dynamic id,
     String? title,
     DateTime? opensAt,
     DateTime? closesAt,
     String? status,
     DateTime? doneAt,
+    String? taskId,
+    String? assignmentId,
+    String? recipientId,
+    String? assignmentStatus,
   }) {
     return ChecklistSummary(
       id: id ?? this.id,
@@ -47,37 +95,56 @@ class ChecklistSummary {
       closesAt: closesAt ?? this.closesAt,
       status: status ?? this.status,
       doneAt: doneAt ?? this.doneAt,
+      taskId: taskId ?? this.taskId,
+      assignmentId: assignmentId ?? this.assignmentId,
+      recipientId: recipientId ?? this.recipientId,
+      assignmentStatus: assignmentStatus ?? this.assignmentStatus,
     );
   }
 }
 
 // ===================== ChecklistQuestion =====================
 class ChecklistQuestion {
-  final int id;
+  final dynamic id;
   final int orderNo;
   final String text;
+  final String? answerType;
+  final dynamic options;
+  final bool isRequired;
 
   ChecklistQuestion({
     required this.id,
     required this.orderNo,
     required this.text,
+    this.answerType,
+    this.options,
+    this.isRequired = false,
   });
 
   factory ChecklistQuestion.fromJson(Map<String, dynamic> j) =>
       ChecklistQuestion(
-        id: j['id'] as int,
-        orderNo: j['order_no'] as int,
-        text: (j['question_text'] ?? j['text']) as String,
+        id: j['id'],
+        orderNo: (j['sort_order'] ?? j['order_no'] ?? 1) is int
+            ? (j['sort_order'] ?? j['order_no'] ?? 1) as int
+            : int.tryParse(
+                    (j['sort_order'] ?? j['order_no'] ?? 1).toString()) ??
+                1,
+        text: (j['question_text'] ?? j['text'] ?? '') as String,
+        answerType: j['answer_type']?.toString(),
+        options: j['options'],
+        isRequired: j['is_required'] == true,
       );
 }
 
 // ===================== ChecklistDetail =====================
 class ChecklistDetail {
-  final int id;
+  final dynamic id;
   final String title;
   final String status;
   final bool submitted;
   final List<ChecklistQuestion> questions;
+  final String? taskId;
+  final String? assignmentId;
 
   ChecklistDetail({
     required this.id,
@@ -85,17 +152,29 @@ class ChecklistDetail {
     required this.status,
     required this.submitted,
     required this.questions,
+    this.taskId,
+    this.assignmentId,
   });
 
-  factory ChecklistDetail.fromJson(Map<String, dynamic> j) => ChecklistDetail(
-        id: j['id'] as int,
-        title: j['title'] as String,
-        status: j['status'] as String,
-        submitted: j['done_at'] != null, // ubah dari submitted ke done_at
-        questions: (j['questions'] as List)
-            .map((e) => ChecklistQuestion.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
+  factory ChecklistDetail.fromJson(Map<String, dynamic> j) {
+    final questionsRaw = (j['questions'] ?? []) as List;
+    final isDone = j['done_at'] != null ||
+        j['submitted'] == true ||
+        j['submitted_at'] != null ||
+        j['status'] == 'completed';
+
+    return ChecklistDetail(
+      id: j['id'],
+      title: (j['title'] ?? '') as String,
+      status: (j['status'] ?? 'dibuka') as String,
+      submitted: isDone,
+      questions: questionsRaw
+          .map((e) => ChecklistQuestion.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      taskId: j['task_id']?.toString(),
+      assignmentId: j['assignment_id']?.toString(),
+    );
+  }
 }
 
 /// nilai jawaban

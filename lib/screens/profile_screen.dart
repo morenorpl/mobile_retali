@@ -250,7 +250,7 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    user['role'] == 'muthawif' ? 'Muthawif' : 'Tour Leader',
+                    user['role']?.toString().toLowerCase().replaceAll('_', '') == 'muthawif' ? 'Muthawif' : 'Tour Leader',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[600],

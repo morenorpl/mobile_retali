@@ -35,7 +35,8 @@ class _AbsensiScreenState extends State<AbsensiScreen> {
     setState(() {
       _name = p.getString('name') ?? 'User';
       _kloter = p.getString('kloter') ?? '-';
-      _role = p.getString('role') ?? 'tourleader'; // 🔥 TAMBAHKAN INI
+      final rawRole = p.getString('role') ?? 'tourleader';
+      _role = rawRole.toLowerCase().replaceAll('_', ''); // tourleader atau muthawif
     });
   }
 

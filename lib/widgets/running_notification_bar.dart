@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:marquee/marquee.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/api_service.dart';
+import '../services/supabase_service.dart';
 
 final GlobalKey<_RunningNotificationBarState> _runningNotifKey =
     GlobalKey<_RunningNotificationBarState>();
@@ -20,7 +21,7 @@ class RunningNotificationBar extends StatefulWidget {
 
 class _RunningNotificationBarState extends State<RunningNotificationBar> {
   String _currentText = "Memuat notifikasi...";
-  StreamSubscription<RemoteMessage>? _fcmSub;
+  RealtimeChannel? _realtimeChannel;
   Timer? _autoRefreshTimer;
   bool _loading = false;
 
@@ -29,25 +30,46 @@ class _RunningNotificationBarState extends State<RunningNotificationBar> {
     super.initState();
     _fetchLatest();
 
-    // 🔁 auto refresh tiap 5 detik
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    // 🔁 auto refresh tiap 10 detik
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       _fetchLatest();
     });
 
-    // 🔔 realtime dari firebase
-    _fcmSub = FirebaseMessaging.onMessage.listen((message) {
-      final notif = message.notification;
-      if (notif != null && (notif.body ?? '').trim().isNotEmpty) {
-        setState(() => _currentText = notif.body!.trim());
-        debugPrint("🔔 FCM body: ${notif.body}");
-      } else if (message.data.isNotEmpty) {
-        final body = message.data['body'] ?? message.data['message'] ?? '';
-        if (body.toString().trim().isNotEmpty) {
-          setState(() => _currentText = body.toString().trim());
-          debugPrint("⚡ FCM data body: $body");
-        }
-      }
-    });
+    // 🔔 Realtime listener dari Supabase
+    _setupSupabaseRealtime();
+  }
+
+  void _setupSupabaseRealtime() {
+    final client = SupabaseService.client;
+    if (client == null) return;
+
+    try {
+      _realtimeChannel = client
+          .channel('public:running_notifications')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.insert,
+            schema: 'public',
+            table: 'notifications',
+            callback: (payload) {
+              final newRecord = payload.newRecord;
+              final body = (newRecord['body'] ??
+                      newRecord['message'] ??
+                      newRecord['content'] ??
+                      newRecord['text'] ??
+                      '')
+                  .toString()
+                  .trim();
+
+              if (body.isNotEmpty && mounted) {
+                setState(() => _currentText = body);
+                debugPrint("⚡ Supabase Realtime notif: $body");
+              }
+            },
+          )
+          .subscribe();
+    } catch (e) {
+      debugPrint("⚠️ Gagal setup Supabase Realtime di running bar: $e");
+    }
   }
 
   Future<void> _fetchLatest() async {
@@ -85,17 +107,19 @@ class _RunningNotificationBarState extends State<RunningNotificationBar> {
 
         debugPrint("🧾 Body terdeteksi: '$body'");
 
-        if (body.isNotEmpty && body != _currentText) {
+        if (body.isNotEmpty && body != _currentText && mounted) {
           setState(() => _currentText = body);
-        } else if (body.isEmpty) {
+        } else if (body.isEmpty && mounted) {
           setState(() => _currentText = "Belum ada isi notifikasi");
         }
-      } else {
+      } else if (mounted) {
         setState(() => _currentText = "Belum ada notifikasi");
       }
     } catch (e) {
       debugPrint("⚠️ Gagal ambil notifikasi: $e");
-      setState(() => _currentText = "Gagal memuat notifikasi");
+      if (mounted) {
+        setState(() => _currentText = "Gagal memuat notifikasi");
+      }
     } finally {
       _loading = false;
     }
@@ -103,7 +127,7 @@ class _RunningNotificationBarState extends State<RunningNotificationBar> {
 
   @override
   void dispose() {
-    _fcmSub?.cancel();
+    _realtimeChannel?.unsubscribe();
     _autoRefreshTimer?.cancel();
     super.dispose();
   }

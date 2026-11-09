@@ -48,6 +48,16 @@ class _LoginScreenState extends State<LoginScreen>
     final email = _emailC.text.trim();
     final pass = _passC.text;
 
+    if (email.isEmpty || pass.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.redAccent,
+          content: Text('Email dan password wajib diisi'),
+        ),
+      );
+      return;
+    }
+
     setState(() => _loading = true);
 
     final result = await ApiService.login(email, pass);

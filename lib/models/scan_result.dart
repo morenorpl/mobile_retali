@@ -2,7 +2,7 @@ class ScanResult {
   final bool success;
   final bool duplicate;
 
-  final String code; // passport_number / koper_code
+  final String code; // passport_number / koper_code / kode_koper
   final String? ownerName;
   final String? ownerPhone;
   final String? kloter;
@@ -27,14 +27,23 @@ class ScanResult {
   // SUCCESS
   // ===============================
   factory ScanResult.success(Map<String, dynamic> data) {
+    final rawTime = data['scanned_at'] ?? data['created_at'];
     return ScanResult(
       success: true,
       duplicate: false,
-      code: data['passport_number'] ?? data['koper_code'],
-      ownerName: data['owner_name'],
-      ownerPhone: data['owner_phone'],
-      kloter: data['kloter'],
-      scannedAt: DateTime.tryParse(data['scanned_at'] ?? ''),
+      code: (data['passport_number'] ??
+              data['koper_code'] ??
+              data['kode_koper'] ??
+              '')
+          .toString(),
+      ownerName: data['owner_name'] ?? data['nama_pemilik'],
+      ownerPhone: data['owner_phone'] ??
+          data['phone'] ??
+          data['nomor_telepon'],
+      kloter: data['kloter']?.toString(),
+      scannedAt: rawTime != null
+          ? DateTime.tryParse(rawTime.toString())
+          : DateTime.now(),
     );
   }
 
@@ -46,12 +55,26 @@ class ScanResult {
     Map<String, dynamic> data,
     String? message,
   ) {
+    final rawTime = data['scanned_at'] ?? data['created_at'];
     return ScanResult(
       success: false,
       duplicate: true,
-      code: code,
-      scannedAt: DateTime.tryParse(data['scanned_at'] ?? ''),
-      scannedBy: data['tourleader'],
+      code: code.isNotEmpty
+          ? code
+          : (data['passport_number'] ??
+                  data['koper_code'] ??
+                  data['kode_koper'] ??
+                  '')
+              .toString(),
+      ownerName: data['owner_name'] ?? data['nama_pemilik'],
+      ownerPhone: data['owner_phone'] ??
+          data['phone'] ??
+          data['nomor_telepon'],
+      kloter: data['kloter']?.toString(),
+      scannedAt: rawTime != null
+          ? DateTime.tryParse(rawTime.toString())
+          : null,
+      scannedBy: data['tourleader']?.toString(),
       message: message,
     );
   }

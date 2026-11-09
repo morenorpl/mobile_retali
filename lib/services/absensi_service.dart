@@ -3,12 +3,15 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'api_service.dart';
 
 class AbsensiService {
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE',
-    defaultValue: 'http://36.64.12.107:11281/api',
-  );
+  static String get baseUrl {
+    var b = ApiService.ROOT_URL.trim();
+    if (b.endsWith('/')) b = b.substring(0, b.length - 1);
+    if (!b.endsWith('/api')) b = '$b/api';
+    return b;
+  }
 
   static Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -28,35 +31,41 @@ class AbsensiService {
         ? '/muthawif/attendance'
         : '/tourleader/attendance';
 
-    final url = Uri.parse('$baseUrl$endpoint');
+    Uri url = Uri.parse('$baseUrl$endpoint');
 
-    final req = http.MultipartRequest('POST', url);
+    Future<http.Response> sendReq(Uri targetUrl) async {
+      final req = http.MultipartRequest('POST', targetUrl);
+      if (token != null) {
+        req.headers['Authorization'] = 'Bearer $token';
+      }
+      if (lat != null) req.fields['lat'] = lat.toString();
+      if (lng != null) req.fields['lng'] = lng.toString();
 
-    if (token != null) {
-      req.headers['Authorization'] = 'Bearer $token';
-    }
+      if (kIsWeb) {
+        final bytes = await pickedFile.readAsBytes();
+        req.files.add(
+          http.MultipartFile.fromBytes('photo', bytes, filename: pickedFile.name),
+        );
+      } else {
+        req.files.add(
+          await http.MultipartFile.fromPath(
+            'photo',
+            pickedFile.path,
+            filename: pickedFile.name,
+          ),
+        );
+      }
 
-    if (lat != null) req.fields['lat'] = lat.toString();
-    if (lng != null) req.fields['lng'] = lng.toString();
-
-    if (kIsWeb) {
-      final bytes = await pickedFile.readAsBytes();
-      req.files.add(
-        http.MultipartFile.fromBytes('photo', bytes, filename: pickedFile.name),
-      );
-    } else {
-      req.files.add(
-        await http.MultipartFile.fromPath(
-          'photo',
-          pickedFile.path,
-          filename: pickedFile.name,
-        ),
-      );
+      final streamed = await req.send();
+      return http.Response.fromStream(streamed);
     }
 
     try {
-      final streamed = await req.send();
-      final res = await http.Response.fromStream(streamed);
+      var res = await sendReq(url);
+      if (res.statusCode == 404) {
+        // Fallback ke endpoint umum backend Vercel: /api/attendance
+        res = await sendReq(Uri.parse('$baseUrl/attendance'));
+      }
 
       if (res.statusCode == 200 || res.statusCode == 201) {
         return {'success': true, 'data': jsonDecode(res.body)};
@@ -68,13 +77,13 @@ class AbsensiService {
     }
   }
 
-  /// (Opsional) Ambil riwayat absensi TL sendiri
+  /// Ambil riwayat absensi TL sendiri
   static Future<Map<String, dynamic>> myHistory({int page = 1}) async {
     final token = await _getToken();
-    final url = Uri.parse('$baseUrl/tourleader/attendance?page=$page');
+    final url = Uri.parse('$baseUrl/attendance?page=$page');
 
     try {
-      final res = await http
+      var res = await http
           .get(
             url,
             headers: {
@@ -83,6 +92,16 @@ class AbsensiService {
             },
           )
           .timeout(const Duration(seconds: 20));
+
+      if (res.statusCode == 404) {
+        res = await http.get(
+          Uri.parse('$baseUrl/tourleader/attendance?page=$page'),
+          headers: {
+            'Content-Type': 'application/json',
+            if (token != null) 'Authorization': 'Bearer $token',
+          },
+        ).timeout(const Duration(seconds: 20));
+      }
 
       if (res.statusCode == 200) {
         return {'success': true, 'data': jsonDecode(res.body)};

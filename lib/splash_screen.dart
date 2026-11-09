@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'services/api_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -114,8 +115,21 @@ class _SplashScreenState extends State<SplashScreen>
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
+    final role = (prefs.getString('role') ?? '').toLowerCase().replaceAll('_', '').trim();
 
     if (!mounted) return;
+
+    // Pastikan admin tidak bisa login (hanya tour leader dan muthawif)
+    if (role == 'admin') {
+      await ApiService.logout();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const LoginScreen(),
+        ),
+      );
+      return;
+    }
 
     if (token != null && token.isNotEmpty) {
       Navigator.pushReplacement(

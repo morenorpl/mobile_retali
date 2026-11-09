@@ -83,19 +83,29 @@ class ItineraryService {
   //  ENDPOINT KHUSUS TOUR LEADER
   // =====================================================
 
-  /// GET /api/tourleader/itinerary
+  /// GET /api/tourleader/itinerary (atau /api/itineraries)
   Future<({List<Itinerary> data, int? nextPage})> list({
     String? q,
     int page = 1,
   }) async {
     try {
-      final res = await _dio.get(
-        '/tourleader/itinerary',
-        queryParameters: {
-          if (q != null && q.isNotEmpty) 'q': q,
-          'page': page,
-        },
-      );
+      Response res;
+      try {
+        res = await _dio.get(
+          '/tourleader/itinerary',
+          queryParameters: {
+            if (q != null && q.isNotEmpty) 'q': q,
+            'page': page,
+          },
+        );
+      } catch (_) {
+        res = await _dio.get(
+          '/itineraries',
+          queryParameters: {
+            if (q != null && q.isNotEmpty) 'search': q,
+          },
+        );
+      }
 
       if (res.statusCode == 200) {
         final list = _unwrapList(res.data).map(Itinerary.fromJson).toList();
@@ -124,10 +134,15 @@ class ItineraryService {
     }
   }
 
-  /// GET /api/tourleader/itinerary/{id}
+  /// GET /api/tourleader/itinerary/{id} (atau /api/itineraries/{id})
   Future<Itinerary> show(int id) async {
     try {
-      final res = await _dio.get('/tourleader/itinerary/$id');
+      Response res;
+      try {
+        res = await _dio.get('/tourleader/itinerary/$id');
+      } catch (_) {
+        res = await _dio.get('/itineraries/$id');
+      }
 
       if (res.statusCode == 200) {
         return _unwrap<Itinerary>(res.data, Itinerary.fromJson);

@@ -14,8 +14,6 @@ buildscript {
         classpath("com.android.tools.build:gradle:8.2.2")
         // Kotlin Gradle Plugin — pakai versi langsung, tanpa variabel
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24")
-        // Google Services (Firebase, dsb)
-        classpath("com.google.gms:google-services:4.4.2")
     }
 }
 
