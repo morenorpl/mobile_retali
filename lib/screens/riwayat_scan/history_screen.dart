@@ -16,6 +16,7 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   HistoryType _type = HistoryType.koper;
   late Future<List<dynamic>> _futureScans;
+  String? _currentKloter;
 
   static const Color _mainColor = Color(0xFF842D62);
   static const Color _pageBg = Color(0xFFF8F6F8);
@@ -27,10 +28,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _loadData() {
-    _futureScans = _type == HistoryType.koper
-        ? ApiService.getScans()
-        : ApiService.getPassportScans();
+    _futureScans = _fetchScans();
     setState(() {});
+  }
+
+  Future<List<dynamic>> _fetchScans() async {
+    final kloter = await ApiService.getCurrentUserKloter();
+    if (mounted && _currentKloter != kloter) {
+      setState(() {
+        _currentKloter = kloter;
+      });
+    }
+    return _type == HistoryType.koper
+        ? ApiService.getScans(kloter: kloter)
+        : ApiService.getPassportScans(kloter: kloter);
   }
 
   String _formatDateTime(String v) {
@@ -130,7 +141,36 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 14),
+
+          /// BADGE KLOTER PETUGAS
+          if (_currentKloter != null && _currentKloter!.isNotEmpty && _currentKloter != '-')
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: _mainColor.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _mainColor.withOpacity(0.2)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.badge_outlined, size: 16, color: _mainColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Kloter Petugas: $_currentKloter",
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: _mainColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          const SizedBox(height: 10),
 
           /// LIST
           Expanded(
@@ -179,6 +219,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 final scans = snapshot.data ?? [];
 
                 if (scans.isEmpty) {
+                  final String kloterText = (_currentKloter != null &&
+                          _currentKloter!.isNotEmpty &&
+                          _currentKloter != '-')
+                      ? "\nuntuk $_currentKloter"
+                      : "";
+
                   return RefreshIndicator(
                     onRefresh: () async => _loadData(),
                     child: SingleChildScrollView(
@@ -196,7 +242,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              "Belum ada riwayat scan ${_type == HistoryType.koper ? 'koper' : 'paspor'}",
+                              "Belum ada riwayat scan ${_type == HistoryType.koper ? 'koper' : 'paspor'}$kloterText",
+                              textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontSize: 16,
                                 color: Colors.grey,

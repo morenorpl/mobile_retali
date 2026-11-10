@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mobile_retali/screens/notifications.dart';
 import 'package:mobile_retali/screens/scan_screen.dart';
@@ -53,10 +54,12 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _loadUserInfo();
     _loadUnread();
+    NotificationService.addListener(_loadUnread);
   }
 
   @override
   void dispose() {
+    NotificationService.removeListener(_loadUnread);
     _scrollController.dispose();
     super.dispose();
   }

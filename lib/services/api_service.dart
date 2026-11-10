@@ -2,8 +2,10 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/notification_model.dart';
 import 'supabase_service.dart';
 
 class ApiService {
@@ -109,16 +111,158 @@ class ApiService {
     final name = user['name'] ?? user['full_name'] ?? user['username'] ?? '-';
     final email = user['email'] ?? '-';
     final role = user['role'] ?? 'tour_leader';
-    final kloter = user['kloter'] ?? user['kloter_name'] ?? '-';
+
+    String kloter = '-';
+    if (user['kloter'] is Map) {
+      kloter = (user['kloter']['name'] ?? user['kloter']['nama'] ?? '-').toString();
+    } else if (user['kloter'] != null && user['kloter'].toString().isNotEmpty) {
+      kloter = user['kloter'].toString();
+    } else if (user['kloter_name'] != null) {
+      kloter = user['kloter_name'].toString();
+    }
+
     final kloterTanggal = user['kloter_tanggal'] ?? user['kloter_date'] ?? '-';
+    final kloterId = user['kloter_id'] ?? (user['kloter'] is Map ? user['kloter']['id'] : null) ?? '';
 
     await prefs.setString("id", userId.toString());
     await prefs.setString("user_id", userId.toString());
     await prefs.setString("name", name.toString());
     await prefs.setString("email", email.toString());
     await prefs.setString("role", role.toString());
-    await prefs.setString("kloter", kloter.toString());
+    await prefs.setString("kloter", kloter);
+    if (kloterId.toString().isNotEmpty) {
+      await prefs.setString("kloter_id", kloterId.toString());
+    }
     await prefs.setString("kloter_tanggal", kloterTanggal.toString());
+  }
+
+  // =====================
+  // GET CURRENT USER KLOTER
+  // =====================
+  static Future<String?> getCurrentUserKloter() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? kloter = prefs.getString("kloter");
+
+    // Jika sudah ada kloter tersimpan yang valid (bukan '-'), return langsung
+    if (kloter != null && kloter.trim().isNotEmpty && kloter.trim() != '-') {
+      return kloter.trim();
+    }
+
+    // Jika belum ada atau masih '-', coba sinkronkan dari Supabase profiles
+    final supabaseClient = SupabaseService.client;
+    final userId = prefs.getString("user_id") ?? prefs.getString("id");
+    final email = prefs.getString("email");
+
+    if (supabaseClient != null) {
+      try {
+        Map<String, dynamic>? profile;
+        if (userId != null && userId.isNotEmpty) {
+          profile = await supabaseClient
+              .from('profiles')
+              .select('*, kloter(*)')
+              .eq('id', userId)
+              .maybeSingle();
+        }
+        if (profile == null && email != null && email.isNotEmpty) {
+          profile = await supabaseClient
+              .from('profiles')
+              .select('*, kloter(*)')
+              .eq('email', email)
+              .maybeSingle();
+        }
+
+        if (profile != null) {
+          String? foundKloter;
+          String? foundTanggal;
+          if (profile['kloter'] is Map) {
+            foundKloter = (profile['kloter']['name'] ?? profile['kloter']['nama'])?.toString();
+            foundTanggal = profile['kloter']['start_date']?.toString();
+          } else if (profile['kloter'] != null && profile['kloter'].toString().isNotEmpty) {
+            foundKloter = profile['kloter'].toString();
+          } else if (profile['kloter_id'] != null) {
+            final k = await supabaseClient
+                .from('kloter')
+                .select('name, start_date')
+                .eq('id', profile['kloter_id'].toString())
+                .maybeSingle();
+            if (k != null && k['name'] != null) {
+              foundKloter = k['name'].toString();
+              foundTanggal = k['start_date']?.toString();
+            }
+          }
+
+          if (foundKloter != null && foundKloter.trim().isNotEmpty && foundKloter.trim() != '-') {
+            await prefs.setString("kloter", foundKloter.trim());
+            if (foundTanggal != null && foundTanggal.isNotEmpty) {
+              await prefs.setString("kloter_tanggal", foundTanggal);
+            }
+            if (profile['kloter_id'] != null) {
+              await prefs.setString("kloter_id", profile['kloter_id'].toString());
+            }
+            return foundKloter.trim();
+          }
+        }
+      } catch (e) {
+        debugPrint('⚠️ Error getCurrentUserKloter Supabase client: $e');
+      }
+    }
+
+    // Direct REST Fallback
+    try {
+      if (email != null && email.isNotEmpty) {
+        final restData = await SupabaseService.restGet(
+          'profiles?select=*,kloter(*)&email=eq.$email',
+        );
+        if (restData.isNotEmpty && restData.first is Map) {
+          final p = Map<String, dynamic>.from(restData.first as Map);
+          String? foundKloter;
+          if (p['kloter'] is Map) {
+            foundKloter = (p['kloter']['name'] ?? p['kloter']['nama'])?.toString();
+          } else if (p['kloter'] != null && p['kloter'].toString().isNotEmpty) {
+            foundKloter = p['kloter'].toString();
+          }
+          if (foundKloter != null && foundKloter.trim().isNotEmpty && foundKloter.trim() != '-') {
+            await prefs.setString("kloter", foundKloter.trim());
+            return foundKloter.trim();
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error getCurrentUserKloter Supabase REST: $e');
+    }
+
+    return kloter;
+  }
+
+  // =====================
+  // KLOTER COMPARISON HELPER
+  // =====================
+  static bool isSameKloter(String? userKloter, String? itemKloter) {
+    if (userKloter == null || itemKloter == null) return false;
+    final u = userKloter.trim().toLowerCase();
+    final i = itemKloter.trim().toLowerCase();
+    if (u.isEmpty || i.isEmpty || u == '-' || i == '-') return false;
+
+    // 1. Exact match (case-insensitive & trimmed)
+    if (u == i) return true;
+
+    // 2. Remove standard separators & 'kloter' keyword
+    // e.g. "kloter 198" -> "198", "kloter-198" -> "198", "umrah_reguler" -> "umrahreguler"
+    final uClean = u.replaceAll('kloter', '').replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final iClean = i.replaceAll('kloter', '').replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+    if (uClean.isNotEmpty && iClean.isNotEmpty && uClean == iClean) {
+      return true;
+    }
+
+    // 3. Number-only comparison: if both contain digits, compare extracted digits
+    final uDigits = RegExp(r'\d+').allMatches(u).map((m) => m.group(0)).join();
+    final iDigits = RegExp(r'\d+').allMatches(i).map((m) => m.group(0)).join();
+    if (uDigits.isNotEmpty && iDigits.isNotEmpty && uDigits == iDigits) {
+      return true;
+    }
+
+    return false;
   }
 
   // =====================
@@ -156,6 +300,9 @@ class ApiService {
           String userRole = user is Map<String, dynamic> ? (user['role']?.toString() ?? '') : '';
           String userId = user is Map<String, dynamic> ? (user['id'] ?? user['user_id'] ?? '').toString() : '';
           String userName = user is Map<String, dynamic> ? (user['name'] ?? user['username'] ?? user['full_name'] ?? '').toString() : '';
+          String userKloter = '';
+          String? userKloterId;
+          String userKloterTanggal = '';
 
           // Sinkronkan ke Supabase Auth jika tersedia & ambil data profile
           final supabaseClient = SupabaseService.client;
@@ -173,7 +320,7 @@ class ApiService {
             try {
               final profile = await supabaseClient
                   .from('profiles')
-                  .select('*')
+                  .select('*, kloter(*)')
                   .or('email.eq.$email,id.eq.$userId')
                   .maybeSingle();
 
@@ -181,8 +328,38 @@ class ApiService {
                 userId = profile['id']?.toString() ?? userId;
                 userRole = profile['role']?.toString() ?? userRole;
                 userName = profile['username'] ?? profile['name'] ?? userName;
+                if (profile['kloter'] is Map) {
+                  userKloter = (profile['kloter']['name'] ?? profile['kloter']['nama'] ?? '').toString();
+                  userKloterTanggal = (profile['kloter']['start_date'] ?? '').toString();
+                } else if (profile['kloter'] != null && profile['kloter'].toString().isNotEmpty) {
+                  userKloter = profile['kloter'].toString();
+                }
+                userKloterId = profile['kloter_id']?.toString();
               }
             } catch (_) {}
+          }
+
+          if (userKloter.isEmpty && userKloterId != null && userKloterId.isNotEmpty && supabaseClient != null) {
+            try {
+              final k = await supabaseClient.from('kloter').select('name, start_date').eq('id', userKloterId).maybeSingle();
+              if (k != null && k['name'] != null) {
+                userKloter = k['name'].toString();
+                if (userKloterTanggal.isEmpty && k['start_date'] != null) {
+                  userKloterTanggal = k['start_date'].toString();
+                }
+              }
+            } catch (_) {}
+          }
+
+          if (userKloter.isEmpty && user is Map) {
+            if (user['kloter'] is Map) {
+              userKloter = (user['kloter']['name'] ?? user['kloter']['nama'] ?? '').toString();
+            } else if (user['kloter'] != null && user['kloter'].toString().isNotEmpty) {
+              userKloter = user['kloter'].toString();
+            } else if (user['kloter_name'] != null) {
+              userKloter = user['kloter_name'].toString();
+            }
+            userKloterTanggal = (user['kloter_tanggal'] ?? user['kloter_date'] ?? '').toString();
           }
 
           // 🛑 VALIDASI ROLE: Hanya Tour Leader dan Muthawif yang boleh login (Admin ditolak)
@@ -204,8 +381,9 @@ class ApiService {
             'email': email,
             'name': userName.isNotEmpty ? userName : email.split('@').first,
             'role': userRole.isNotEmpty ? userRole : 'tour_leader',
-            'kloter': user is Map ? (user['kloter'] ?? '-') : '-',
-            'kloter_tanggal': user is Map ? (user['kloter_tanggal'] ?? '-') : '-',
+            'kloter': userKloter.isNotEmpty ? userKloter : '-',
+            'kloter_id': userKloterId,
+            'kloter_tanggal': userKloterTanggal.isNotEmpty ? userKloterTanggal : '-',
           });
 
           return {'success': true, 'message': 'Login Berhasil'};
@@ -240,11 +418,14 @@ class ApiService {
             String userRole = '';
             String userName = '';
             String profileId = user.id;
+            String userKloter = '';
+            String? userKloterId;
+            String userKloterTanggal = '';
 
             try {
               final profile = await supabaseClient
                   .from('profiles')
-                  .select('*')
+                  .select('*, kloter(*)')
                   .or('id.eq.${user.id},email.eq.$email')
                   .maybeSingle();
 
@@ -252,12 +433,37 @@ class ApiService {
                 profileId = profile['id']?.toString() ?? user.id;
                 userRole = profile['role']?.toString() ?? '';
                 userName = profile['username'] ?? profile['name'] ?? '';
+                if (profile['kloter'] is Map) {
+                  userKloter = (profile['kloter']['name'] ?? profile['kloter']['nama'] ?? '').toString();
+                  userKloterTanggal = (profile['kloter']['start_date'] ?? '').toString();
+                } else if (profile['kloter'] != null && profile['kloter'].toString().isNotEmpty) {
+                  userKloter = profile['kloter'].toString();
+                }
+                userKloterId = profile['kloter_id']?.toString();
               }
             } catch (_) {}
 
+            if (userKloter.isEmpty && userKloterId != null && userKloterId.isNotEmpty) {
+              try {
+                final k = await supabaseClient.from('kloter').select('name, start_date').eq('id', userKloterId).maybeSingle();
+                if (k != null && k['name'] != null) {
+                  userKloter = k['name'].toString();
+                  if (userKloterTanggal.isEmpty && k['start_date'] != null) {
+                    userKloterTanggal = k['start_date'].toString();
+                  }
+                }
+              } catch (_) {}
+            }
+
+            final meta = user.userMetadata ?? {};
             if (userRole.isEmpty) {
-              final meta = user.userMetadata ?? {};
               userRole = meta['role']?.toString() ?? '';
+            }
+            if (userKloter.isEmpty) {
+              userKloter = (meta['kloter'] ?? '-').toString();
+            }
+            if (userKloterTanggal.isEmpty) {
+              userKloterTanggal = (meta['kloter_tanggal'] ?? '-').toString();
             }
 
             // 🛑 VALIDASI ROLE: Hanya Tour Leader dan Muthawif yang boleh login (Admin ditolak)
@@ -273,15 +479,15 @@ class ApiService {
             await _saveToken(session.accessToken);
             await _saveSessionToken(session.accessToken);
 
-            final meta = user.userMetadata ?? {};
             await saveProfileToLocal({
               'id': profileId,
               'user_id': profileId,
               'email': user.email ?? email,
               'name': userName.isNotEmpty ? userName : (meta['full_name'] ?? meta['name'] ?? user.email?.split('@').first ?? 'Petugas'),
               'role': userRole.isNotEmpty ? userRole : 'tour_leader',
-              'kloter': meta['kloter'] ?? '-',
-              'kloter_tanggal': meta['kloter_tanggal'] ?? '-',
+              'kloter': userKloter.isNotEmpty ? userKloter : '-',
+              'kloter_id': userKloterId,
+              'kloter_tanggal': userKloterTanggal.isNotEmpty ? userKloterTanggal : '-',
             });
 
             return {'success': true, 'message': 'Login Berhasil'};
@@ -360,7 +566,10 @@ class ApiService {
   // =====================
   // GET PASSPORT SCANS
   // =====================
-  static Future<List<dynamic>> getPassportScans() async {
+  static Future<List<dynamic>> getPassportScans({String? kloter}) async {
+    final targetKloter = kloter ?? await getCurrentUserKloter();
+    List<dynamic> list = [];
+
     // 1. Ambil dari Supabase tabel passport_scans via Supabase Client
     final client = SupabaseService.client;
     if (client != null) {
@@ -370,7 +579,7 @@ class ApiService {
             .select('*')
             .order('created_at', ascending: false);
 
-        return res.map((row) {
+        list = res.map((row) {
           final map = Map<String, dynamic>.from(row as Map);
           map['owner_phone'] = map['phone'];
           map['scanned_at'] = map['scanned_at'] ?? map['created_at'];
@@ -382,38 +591,52 @@ class ApiService {
     }
 
     // 2. Direct REST Fallback ke Supabase
-    try {
-      final restData = await SupabaseService.restGet('passport_scans');
-      if (restData.isNotEmpty) {
-        return restData.map((row) {
-          final map = Map<String, dynamic>.from(row as Map);
-          map['owner_phone'] = map['phone'];
-          map['scanned_at'] = map['scanned_at'] ?? map['created_at'];
-          return map;
-        }).toList();
-      }
-    } catch (e) {
-      debugPrint('⚠️ Error getPassportScans Supabase REST fallback: $e');
-    }
-
-    final dio = await _authedClient();
-
-    try {
-      Response res;
+    if (list.isEmpty) {
       try {
-        res = await dio.get('/tourleader/passport-scans');
-      } catch (_) {
-        res = await dio.get('/scans', queryParameters: {'scan_type': 'passport'});
+        final restData = await SupabaseService.restGet('passport_scans');
+        if (restData.isNotEmpty) {
+          list = restData.map((row) {
+            final map = Map<String, dynamic>.from(row as Map);
+            map['owner_phone'] = map['phone'];
+            map['scanned_at'] = map['scanned_at'] ?? map['created_at'];
+            return map;
+          }).toList();
+        }
+      } catch (e) {
+        debugPrint('⚠️ Error getPassportScans Supabase REST fallback: $e');
       }
+    }
 
-      if (res.data is List) return res.data;
-      if (res.data is Map && res.data['data'] is List) {
-        return res.data['data'];
-      }
-      return [];
-    } catch (_) {
+    if (list.isEmpty) {
+      final dio = await _authedClient();
+      try {
+        Response res;
+        try {
+          res = await dio.get('/tourleader/passport-scans');
+        } catch (_) {
+          res = await dio.get('/scans', queryParameters: {'scan_type': 'passport'});
+        }
+
+        if (res.data is List) {
+          list = res.data;
+        } else if (res.data is Map && res.data['data'] is List) {
+          list = res.data['data'];
+        }
+      } catch (_) {}
+    }
+
+    // Filter berdasarkan kloter petugas yang sedang login
+    if (targetKloter != null && targetKloter.isNotEmpty && targetKloter != '-' && targetKloter != 'ALL') {
+      return list.where((scan) {
+        final itemKloter = (scan['kloter'] ?? '').toString();
+        return isSameKloter(targetKloter, itemKloter);
+      }).toList();
+    } else if (targetKloter == null || targetKloter.isEmpty || targetKloter == '-') {
+      // Petugas belum memiliki kloter, tidak menampilkan kloter lain
       return [];
     }
+
+    return list;
   }
 
   // =====================
@@ -495,7 +718,7 @@ class ApiService {
     final supabaseClient = SupabaseService.client;
     if (supabaseClient != null) {
       try {
-        final query = supabaseClient.from('profiles').select('*');
+        final query = supabaseClient.from('profiles').select('*, kloter(*)');
         final profile = userId != null && userId.isNotEmpty
             ? await query.eq('id', userId).maybeSingle()
             : (email != null && email.isNotEmpty
@@ -511,6 +734,33 @@ class ApiService {
               "name",
               (profile['username'] ?? profile['name']).toString(),
             );
+          }
+          String? kloter;
+          String? kloterTanggal;
+          if (profile['kloter'] is Map) {
+            kloter = (profile['kloter']['name'] ?? profile['kloter']['nama'])?.toString();
+            kloterTanggal = profile['kloter']['start_date']?.toString();
+          } else if (profile['kloter'] != null && profile['kloter'].toString().isNotEmpty) {
+            kloter = profile['kloter'].toString();
+          } else if (profile['kloter_id'] != null) {
+            final k = await supabaseClient
+                .from('kloter')
+                .select('name, start_date')
+                .eq('id', profile['kloter_id'].toString())
+                .maybeSingle();
+            if (k != null && k['name'] != null) {
+              kloter = k['name'].toString();
+              kloterTanggal = k['start_date']?.toString();
+            }
+          }
+          if (kloter != null && kloter.trim().isNotEmpty && kloter.trim() != '-') {
+            await prefs.setString("kloter", kloter.trim());
+          }
+          if (kloterTanggal != null && kloterTanggal.trim().isNotEmpty && kloterTanggal.trim() != '-') {
+            await prefs.setString("kloter_tanggal", kloterTanggal.trim());
+          }
+          if (profile['kloter_id'] != null) {
+            await prefs.setString("kloter_id", profile['kloter_id'].toString());
           }
           return profile;
         }
@@ -546,48 +796,267 @@ class ApiService {
   }
 
   // =====================
-  // NOTIFICATIONS
+  // GET CURRENT USER ID
   // =====================
-  static Future<List<dynamic>> getNotifications() async {
-    final dio = await _authedClient();
-    try {
-      final res = await dio.get('/notifications');
+  static Future<String?> getCurrentUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? userId = prefs.getString("user_id") ?? prefs.getString("id");
 
-      if (res.data is List) return res.data;
-      if (res.data is Map<String, dynamic> && res.data['data'] is List) {
-        return res.data['data'];
+    if (userId != null && userId.isNotEmpty && userId != '-') {
+      return userId;
+    }
+
+    // Coba ambil dari Supabase Auth
+    final supaUser = SupabaseService.client?.auth.currentUser;
+    if (supaUser != null && supaUser.id.isNotEmpty) {
+      await prefs.setString("id", supaUser.id);
+      await prefs.setString("user_id", supaUser.id);
+      return supaUser.id;
+    }
+
+    // Coba sinkronisasi dari profile berdasarkan email
+    final email = prefs.getString("email");
+    if (email != null && email.isNotEmpty && SupabaseService.client != null) {
+      try {
+        final prof = await SupabaseService.client!
+            .from('profiles')
+            .select('id')
+            .eq('email', email)
+            .maybeSingle();
+
+        if (prof != null && prof['id'] != null) {
+          final foundId = prof['id'].toString();
+          await prefs.setString("id", foundId);
+          await prefs.setString("user_id", foundId);
+          return foundId;
+        }
+      } catch (e) {
+        debugPrint("⚠️ Gagal sync profile id: $e");
       }
+    }
 
-      return [];
-    } catch (_) {
+    return null;
+  }
+
+  // =====================
+  // NOTIFICATIONS (SUPABASE CONNECTED)
+  // =====================
+  static Future<List<NotificationItem>> getNotificationItems() async {
+    final userId = await getCurrentUserId();
+    if (userId == null || userId.isEmpty) {
+      debugPrint("ℹ️ [ApiService.getNotificationItems] User belum login / userId belum tersedia");
       return [];
     }
+
+    final client = SupabaseService.client;
+    final List<NotificationItem> items = [];
+    final Set<String> seenNotifIds = {};
+
+    // 1. Ambil dari Supabase Client
+    if (client != null) {
+      try {
+        // A. Ambil dari notification_recipients yang ditujukan spesifik ke user login
+        final recipList = await client
+            .from('notification_recipients')
+            .select('*, notifications(*)')
+            .eq('user_id', userId)
+            .order('created_at', ascending: false);
+
+        for (final row in recipList) {
+          if (row['notifications'] is Map) {
+            final notifMap = Map<String, dynamic>.from(row['notifications'] as Map);
+            final notifId = notifMap['id']?.toString() ?? '';
+            if (notifId.isNotEmpty && !seenNotifIds.contains(notifId)) {
+              seenNotifIds.add(notifId);
+              items.add(NotificationItem.fromMap(
+                notifMap,
+                recipientData: Map<String, dynamic>.from(row),
+              ));
+            }
+          }
+        }
+
+        // B. Periksa juga tabel notifications jika ada yang ditujukan langsung (user_id == userId)
+        final directList = await client
+            .from('notifications')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', ascending: false);
+
+        for (final row in directList) {
+          final rowMap = Map<String, dynamic>.from(row);
+          final notifId = rowMap['id']?.toString() ?? '';
+          if (notifId.isNotEmpty && !seenNotifIds.contains(notifId)) {
+            seenNotifIds.add(notifId);
+            items.add(NotificationItem.fromMap(rowMap));
+          }
+        }
+      } catch (e) {
+        debugPrint("⚠️ [ApiService.getNotificationItems] Supabase error: $e");
+      }
+    }
+
+    // 2. Fallback REST Supabase jika Supabase Client belum aktif / ada kendala
+    if (items.isEmpty && SupabaseConfig.isConfigured) {
+      try {
+        final uri = Uri.parse(
+          '${SupabaseConfig.supabaseUrl}/rest/v1/notification_recipients?select=*,notifications(*)&user_id=eq.$userId&order=created_at.desc',
+        );
+        final res = await http.get(uri, headers: SupabaseConfig.restHeaders);
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          final decoded = jsonDecode(res.body);
+          if (decoded is List) {
+            for (final row in decoded) {
+              if (row is Map && row['notifications'] is Map) {
+                final notifMap = Map<String, dynamic>.from(row['notifications'] as Map);
+                final notifId = notifMap['id']?.toString() ?? '';
+                if (notifId.isNotEmpty && !seenNotifIds.contains(notifId)) {
+                  seenNotifIds.add(notifId);
+                  items.add(NotificationItem.fromMap(
+                    notifMap,
+                    recipientData: Map<String, dynamic>.from(row),
+                  ));
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint("⚠️ [ApiService.getNotificationItems] REST error: $e");
+      }
+    }
+
+    // Urutkan notifikasi: yang mendesak / aktif (hijau, kuning, merah) di atas,
+    // lalu urutkan berdasarkan startDate / createdAt terbaru
+    items.sort((a, b) {
+      final rankA = a.status == NotificationStatus.hijau
+          ? 0
+          : a.status == NotificationStatus.kuning
+              ? 1
+              : a.status == NotificationStatus.merah
+                  ? 2
+                  : 3;
+      final rankB = b.status == NotificationStatus.hijau
+          ? 0
+          : b.status == NotificationStatus.kuning
+              ? 1
+              : b.status == NotificationStatus.merah
+                  ? 2
+                  : 3;
+
+      if (rankA != rankB) {
+        return rankA.compareTo(rankB);
+      }
+
+      final dateA = a.startDate ?? a.createdAt;
+      final dateB = b.startDate ?? b.createdAt;
+      return dateB.compareTo(dateA);
+    });
+
+    return items;
+  }
+
+  static Future<List<Map<String, dynamic>>> getNotifications() async {
+    final items = await getNotificationItems();
+    return items.map((item) {
+      final map = item.toMap();
+      map['_model'] = item;
+      return map;
+    }).toList();
   }
 
   static Future<void> markAllNotificationsAsRead() async {
-    final dio = await _authedClient();
-    try {
-      await dio.post('/notifications/read-all');
-    } catch (_) {
-      // Alternatif: ambil notifikasi dan tandai yang belum dibaca
+    final userId = await getCurrentUserId();
+    final nowUtc = DateTime.now().toUtc().toIso8601String();
+    final client = SupabaseService.client;
+
+    if (client != null && userId != null && userId.isNotEmpty) {
       try {
-        final list = await getNotifications();
-        for (final item in list) {
-          if (item is Map && item['id'] != null) {
-            await markNotificationAsRead(item['id']);
-          }
-        }
+        await client
+            .from('notification_recipients')
+            .update({'is_read': true, 'read_at': nowUtc})
+            .eq('user_id', userId)
+            .eq('is_read', false);
+      } catch (e) {
+        debugPrint("⚠️ [markAllNotificationsAsRead] error updating notification_recipients: $e");
+      }
+
+      try {
+        await client
+            .from('notifications')
+            .update({'is_read': true, 'read_at': nowUtc})
+            .eq('user_id', userId)
+            .eq('is_read', false);
       } catch (_) {}
     }
+
+    // Direct REST update
+    if (SupabaseConfig.isConfigured && userId != null && userId.isNotEmpty) {
+      try {
+        final uri = Uri.parse(
+          '${SupabaseConfig.supabaseUrl}/rest/v1/notification_recipients?user_id=eq.$userId&is_read=eq.false',
+        );
+        await http.patch(
+          uri,
+          headers: SupabaseConfig.restHeaders,
+          body: jsonEncode({'is_read': true, 'read_at': nowUtc}),
+        );
+      } catch (_) {}
+    }
+
+    // Fallback Dio jika ada backend
+    try {
+      final dio = await _authedClient();
+      await dio.post('/notifications/read-all');
+    } catch (_) {}
   }
 
   static Future<void> markNotificationAsRead(dynamic id) async {
-    final dio = await _authedClient();
+    final userId = await getCurrentUserId();
+    final nowUtc = DateTime.now().toUtc().toIso8601String();
+    final client = SupabaseService.client;
+
+    if (client != null && userId != null && userId.isNotEmpty) {
+      try {
+        await client
+            .from('notification_recipients')
+            .update({'is_read': true, 'read_at': nowUtc})
+            .eq('notification_id', id.toString())
+            .eq('user_id', userId);
+      } catch (e) {
+        debugPrint("⚠️ [markNotificationAsRead] error updating notification_recipients: $e");
+      }
+
+      try {
+        await client
+            .from('notifications')
+            .update({'is_read': true, 'read_at': nowUtc})
+            .eq('id', id.toString())
+            .eq('user_id', userId);
+      } catch (_) {}
+    }
+
+    // Direct REST update
+    if (SupabaseConfig.isConfigured && userId != null && userId.isNotEmpty) {
+      try {
+        final uri = Uri.parse(
+          '${SupabaseConfig.supabaseUrl}/rest/v1/notification_recipients?notification_id=eq.$id&user_id=eq.$userId',
+        );
+        await http.patch(
+          uri,
+          headers: SupabaseConfig.restHeaders,
+          body: jsonEncode({'is_read': true, 'read_at': nowUtc}),
+        );
+      } catch (_) {}
+    }
+
+    // Fallback backend
     try {
-      // Backend FastAPI menggunakan PATCH /api/notifications/{notification_id}/read
+      final dio = await _authedClient();
       await dio.patch('/notifications/$id/read');
     } catch (_) {
       try {
+        final dio = await _authedClient();
         await dio.post('/notifications/$id/read');
       } catch (_) {}
     }
@@ -602,7 +1071,10 @@ class ApiService {
     if (client != null) {
       try {
         final prefs = await SharedPreferences.getInstance();
-        final defaultKloter = prefs.getString("kloter") ?? "-";
+        final userKloter = await getCurrentUserKloter();
+        final defaultKloter = (userKloter != null && userKloter.trim().isNotEmpty && userKloter.trim() != '-')
+            ? userKloter.trim()
+            : (prefs.getString("kloter") ?? "-");
 
         String kodeKoper = "";
         String namaPemilik = "-";
@@ -744,7 +1216,10 @@ class ApiService {
     if (client != null) {
       try {
         final prefs = await SharedPreferences.getInstance();
-        final defaultKloter = prefs.getString("kloter") ?? "-";
+        final userKloter = await getCurrentUserKloter();
+        final defaultKloter = (userKloter != null && userKloter.trim().isNotEmpty && userKloter.trim() != '-')
+            ? userKloter.trim()
+            : (prefs.getString("kloter") ?? "-");
 
         String passportNumber = "";
         String ownerName = "-";
@@ -877,7 +1352,10 @@ class ApiService {
   // =====================
   // GET SCANS (KOPER)
   // =====================
-  static Future<List<dynamic>> getScans() async {
+  static Future<List<dynamic>> getScans({String? kloter}) async {
+    final targetKloter = kloter ?? await getCurrentUserKloter();
+    List<dynamic> list = [];
+
     // 1. Ambil dari Supabase tabel koper via Supabase Client
     final client = SupabaseService.client;
     if (client != null) {
@@ -887,7 +1365,7 @@ class ApiService {
             .select('*')
             .order('created_at', ascending: false);
 
-        return res.map((row) {
+        list = res.map((row) {
           final map = Map<String, dynamic>.from(row as Map);
           map['koper_code'] = map['kode_koper'];
           map['owner_name'] = map['nama_pemilik'];
@@ -901,40 +1379,54 @@ class ApiService {
     }
 
     // 2. Direct REST Fallback ke Supabase
-    try {
-      final restData = await SupabaseService.restGet('koper');
-      if (restData.isNotEmpty) {
-        return restData.map((row) {
-          final map = Map<String, dynamic>.from(row as Map);
-          map['koper_code'] = map['kode_koper'];
-          map['owner_name'] = map['nama_pemilik'];
-          map['owner_phone'] = map['nomor_telepon'];
-          map['scanned_at'] = map['created_at'];
-          return map;
-        }).toList();
-      }
-    } catch (e) {
-      debugPrint('⚠️ Error getScans Supabase REST fallback: $e');
-    }
-
-    final dio = await _authedClient();
-
-    try {
-      Response res;
+    if (list.isEmpty) {
       try {
-        res = await dio.get('/tourleader/scans');
-      } catch (_) {
-        res = await dio.get('/scans');
+        final restData = await SupabaseService.restGet('koper');
+        if (restData.isNotEmpty) {
+          list = restData.map((row) {
+            final map = Map<String, dynamic>.from(row as Map);
+            map['koper_code'] = map['kode_koper'];
+            map['owner_name'] = map['nama_pemilik'];
+            map['owner_phone'] = map['nomor_telepon'];
+            map['scanned_at'] = map['created_at'];
+            return map;
+          }).toList();
+        }
+      } catch (e) {
+        debugPrint('⚠️ Error getScans Supabase REST fallback: $e');
       }
+    }
 
-      if (res.data is List) return res.data;
-      if (res.data is Map && res.data['data'] is List) {
-        return res.data['data'];
-      }
-      return [];
-    } catch (_) {
+    if (list.isEmpty) {
+      final dio = await _authedClient();
+      try {
+        Response res;
+        try {
+          res = await dio.get('/tourleader/scans');
+        } catch (_) {
+          res = await dio.get('/scans');
+        }
+
+        if (res.data is List) {
+          list = res.data;
+        } else if (res.data is Map && res.data['data'] is List) {
+          list = res.data['data'];
+        }
+      } catch (_) {}
+    }
+
+    // Filter berdasarkan kloter petugas yang sedang login
+    if (targetKloter != null && targetKloter.isNotEmpty && targetKloter != '-' && targetKloter != 'ALL') {
+      return list.where((scan) {
+        final itemKloter = (scan['kloter'] ?? '').toString();
+        return isSameKloter(targetKloter, itemKloter);
+      }).toList();
+    } else if (targetKloter == null || targetKloter.isEmpty || targetKloter == '-') {
+      // Petugas belum memiliki kloter, tidak menampilkan kloter lain
       return [];
     }
+
+    return list;
   }
 
   // =====================

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import 'package:mobile_retali/screens/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -67,6 +68,9 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _loading = false);
 
     if (result['success'] == true) {
+      NotificationService.setupSupabaseRealtime();
+      NotificationService.checkAndTriggerPendingNotifications();
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

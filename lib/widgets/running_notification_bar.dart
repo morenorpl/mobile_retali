@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:marquee/marquee.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/api_service.dart';
-import '../services/supabase_service.dart';
+import '../services/notification_service.dart';
 
 final GlobalKey<_RunningNotificationBarState> _runningNotifKey =
     GlobalKey<_RunningNotificationBarState>();
@@ -21,7 +20,7 @@ class RunningNotificationBar extends StatefulWidget {
 
 class _RunningNotificationBarState extends State<RunningNotificationBar> {
   String _currentText = "Memuat notifikasi...";
-  RealtimeChannel? _realtimeChannel;
+  int _unreadCount = 0;
   Timer? _autoRefreshTimer;
   bool _loading = false;
 
@@ -30,95 +29,39 @@ class _RunningNotificationBarState extends State<RunningNotificationBar> {
     super.initState();
     _fetchLatest();
 
-    // 🔁 auto refresh tiap 10 detik
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+    // Refresh berkala tiap 20 detik
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       _fetchLatest();
     });
 
-    // 🔔 Realtime listener dari Supabase
-    _setupSupabaseRealtime();
-  }
-
-  void _setupSupabaseRealtime() {
-    final client = SupabaseService.client;
-    if (client == null) return;
-
-    try {
-      _realtimeChannel = client
-          .channel('public:running_notifications')
-          .onPostgresChanges(
-            event: PostgresChangeEvent.insert,
-            schema: 'public',
-            table: 'notifications',
-            callback: (payload) {
-              final newRecord = payload.newRecord;
-              final body = (newRecord['body'] ??
-                      newRecord['message'] ??
-                      newRecord['content'] ??
-                      newRecord['text'] ??
-                      '')
-                  .toString()
-                  .trim();
-
-              if (body.isNotEmpty && mounted) {
-                setState(() => _currentText = body);
-                debugPrint("⚡ Supabase Realtime notif: $body");
-              }
-            },
-          )
-          .subscribe();
-    } catch (e) {
-      debugPrint("⚠️ Gagal setup Supabase Realtime di running bar: $e");
-    }
+    // Daftarkan listener ke NotificationService untuk update realtime
+    NotificationService.addListener(_fetchLatest);
   }
 
   Future<void> _fetchLatest() async {
-    if (_loading) return;
+    if (_loading || !mounted) return;
     _loading = true;
+
     try {
-      final list = await ApiService.getNotifications();
-      debugPrint("📦 Total notif: ${list.length}");
-      if (list.isNotEmpty) {
-        // ambil notifikasi terbaru
-        final notif = list.first ?? list.last;
-        String body = '';
-        // cari field yang berisi teks isi
-        body = (notif['body'] ??
-                notif['message'] ??
-                notif['content'] ??
-                notif['text'] ??
-                '')
-            .toString()
-            .trim();
+      final items = await ApiService.getNotificationItems();
 
-        // kalau body kosong, coba ambil dari notif['data']
-        if (body.isEmpty && notif['data'] != null) {
-          final data = notif['data'];
-          if (data is Map) {
-            body = (data['body'] ??
-                    data['message'] ??
-                    data['content'] ??
-                    data['text'] ??
-                    '')
-                .toString()
-                .trim();
-          }
-        }
+      if (!mounted) return;
 
-        debugPrint("🧾 Body terdeteksi: '$body'");
+      final unread = items.where((it) => !it.isRead).length;
+      final newText = unread > 0
+          ? "Ada $unread notif yang belum dibaca"
+          : "Tidak ada notif baru";
 
-        if (body.isNotEmpty && body != _currentText && mounted) {
-          setState(() => _currentText = body);
-        } else if (body.isEmpty && mounted) {
-          setState(() => _currentText = "Belum ada isi notifikasi");
-        }
-      } else if (mounted) {
-        setState(() => _currentText = "Belum ada notifikasi");
+      if (mounted && (newText != _currentText || unread != _unreadCount)) {
+        setState(() {
+          _currentText = newText;
+          _unreadCount = unread;
+        });
       }
     } catch (e) {
-      debugPrint("⚠️ Gagal ambil notifikasi: $e");
+      debugPrint("⚠️ Gagal ambil notifikasi running bar: $e");
       if (mounted) {
-        setState(() => _currentText = "Gagal memuat notifikasi");
+        setState(() => _currentText = "Tidak ada notif baru");
       }
     } finally {
       _loading = false;
@@ -127,31 +70,41 @@ class _RunningNotificationBarState extends State<RunningNotificationBar> {
 
   @override
   void dispose() {
-    _realtimeChannel?.unsubscribe();
+    NotificationService.removeListener(_fetchLatest);
     _autoRefreshTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final hasUnread = _unreadCount > 0;
+
     return Container(
       key: _runningNotifKey,
       height: 35,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
+        color: Colors.white.withOpacity(0.18),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
-          const Icon(Icons.notifications_active, color: Colors.white, size: 18),
+          Icon(
+            hasUnread ? Icons.notifications_active : Icons.notifications_none,
+            color: Colors.white,
+            size: 18,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Marquee(
               text: _currentText,
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-              velocity: 40,
-              blankSpace: 50,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+              velocity: 35,
+              blankSpace: 60,
               pauseAfterRound: const Duration(seconds: 2),
               startPadding: 10,
             ),

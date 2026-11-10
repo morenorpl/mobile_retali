@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/api_service.dart';
+import 'services/notification_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -122,6 +123,7 @@ class _SplashScreenState extends State<SplashScreen>
     // Pastikan admin tidak bisa login (hanya tour leader dan muthawif)
     if (role == 'admin') {
       await ApiService.logout();
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -132,6 +134,9 @@ class _SplashScreenState extends State<SplashScreen>
     }
 
     if (token != null && token.isNotEmpty) {
+      NotificationService.setupSupabaseRealtime();
+      NotificationService.checkAndTriggerPendingNotifications();
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
