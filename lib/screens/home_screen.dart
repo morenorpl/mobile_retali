@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
+import '../services/presence_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mobile_retali/screens/notifications.dart';
 import 'package:mobile_retali/screens/scan_screen.dart';
 import 'package:mobile_retali/screens/riwayat_scan/history_screen.dart';
 import 'package:mobile_retali/screens/profile_screen.dart';
+import 'package:mobile_retali/screens/curriculum_tour_leader_screen.dart';
 import 'package:mobile_retali/screens/tugas_tourleader/tugas_screen.dart';
 import 'package:mobile_retali/screens/persiapan_umrah_screen.dart';
 import 'package:mobile_retali/screens/quran/quran_list_screen.dart';
@@ -29,6 +31,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int _currentTabIndex = 0;
+  final GlobalKey<HistoryScreenState> _historyKey = GlobalKey<HistoryScreenState>();
+
   String _name = "";
   int _unreadCount = 0;
   String _role = "tour_leader";
@@ -52,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    PresenceService.start();
     _loadUserInfo();
     _loadUnread();
     NotificationService.addListener(_loadUnread);
@@ -59,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    PresenceService.stop();
     NotificationService.removeListener(_loadUnread);
     _scrollController.dispose();
     super.dispose();
@@ -138,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (normalizedRole == 'tourleader') {
         baseMenus.add({
           "img": "assets/home/tugas tour leader.png",
-          "label": "Tugas\nTour Leader",
+          "label": "Curriculum\nTour Leader",
         });
       }
     }
@@ -146,8 +153,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return baseMenus;
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildHomeTab() {
     return Scaffold(
       backgroundColor: Colors.white,
 
@@ -268,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SingleChildScrollView(
           controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           child: Column(
             children: [
               // 📚 Menu Grid
@@ -337,71 +343,121 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+    );
+  }
 
-      // 🔻 Bottom Navbar
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
-        color: const Color(0xFF842D62),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: _currentTabIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_currentTabIndex != 0) {
+          setState(() => _currentTabIndex = 0);
+        }
+      },
+      child: Scaffold(
+        primary: false,
+        backgroundColor: Colors.white,
+        body: IndexedStack(
+          index: _currentTabIndex,
           children: [
-            IconButton(
-              icon: const Icon(Icons.home),
-              color: Colors.white,
-              onPressed: () {},
-            ),
-            IconButton(
-              icon: const Icon(Icons.assignment),
-              color: Colors.white70,
-              onPressed: () {},
-            ),
-            const SizedBox(width: 40),
-            IconButton(
-              icon: const Icon(Icons.history),
-              color: Colors.white70,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const HistoryScreen()),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.person),
-              color: Colors.white70,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                );
-              },
-            ),
+            _buildHomeTab(),
+            HistoryScreen(key: _historyKey, isTab: true),
+            const ProfileScreen(isTab: true),
           ],
         ),
-      ),
 
-      // 📸 FAB Scan
-      floatingActionButton: SizedBox(
-        height: 70,
-        width: 70,
-        child: FloatingActionButton(
-          backgroundColor: Colors.white,
-          shape: const CircleBorder(),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ScanScreen()),
-            );
-          },
-          child: const Icon(
-            Icons.qr_code_scanner,
-            color: Color(0xFF842D62),
-            size: 40,
+        // 🔻 Bottom Navbar
+        bottomNavigationBar: BottomAppBar(
+          shape: const CircularNotchedRectangle(),
+          notchMargin: 8,
+          color: const Color(0xFF842D62),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.home),
+                color: _currentTabIndex == 0 ? Colors.white : Colors.white70,
+                tooltip: "Beranda",
+                onPressed: () {
+                  if (_currentTabIndex == 0) {
+                    if (_scrollController.hasClients) {
+                      _scrollController.animateTo(
+                        0,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
+                      );
+                    }
+                  } else {
+                    setState(() => _currentTabIndex = 0);
+                  }
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.assignment),
+                color: Colors.white70,
+                tooltip: "Tugas Ceklis",
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ChecklistListScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 40),
+              IconButton(
+                icon: const Icon(Icons.history),
+                color: _currentTabIndex == 1 ? Colors.white : Colors.white70,
+                tooltip: "History Scan",
+                onPressed: () {
+                  if (_currentTabIndex == 1) {
+                    _historyKey.currentState?.reload();
+                  } else {
+                    setState(() => _currentTabIndex = 1);
+                  }
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.person),
+                color: _currentTabIndex == 2 ? Colors.white : Colors.white70,
+                tooltip: "Profil",
+                onPressed: () {
+                  setState(() => _currentTabIndex = 2);
+                },
+              ),
+            ],
           ),
         ),
+
+        // 📸 FAB Scan
+        floatingActionButton: SizedBox(
+          height: 70,
+          width: 70,
+          child: FloatingActionButton(
+            backgroundColor: Colors.white,
+            shape: const CircleBorder(),
+            tooltip: "Scan QR",
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ScanScreen()),
+              );
+              if (mounted) {
+                _historyKey.currentState?.reload();
+              }
+            },
+            child: const Icon(
+              Icons.qr_code_scanner,
+              color: Color(0xFF842D62),
+              size: 40,
+            ),
+          ),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 }
@@ -421,7 +477,8 @@ class MenuItemWidget extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       onTap: () {
         final pages = {
-          "Tugas\nTour Leader": const TugasScreen(),
+          "Curriculum\nTour Leader": const CurriculumTourLeaderScreen(),
+          "Tugas\nTour Leader": const CurriculumTourLeaderScreen(),
           "Persiapan\nUmrah": const PersiapanUmrahScreen(),
           "Al-Quran": const QuranListScreen(),
           "Destinasi\nZiarah": const DestinasiZiarahPage(),

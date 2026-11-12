@@ -7,13 +7,14 @@ import 'paspor_detail_screen.dart';
 enum HistoryType { koper, paspor }
 
 class HistoryScreen extends StatefulWidget {
-  const HistoryScreen({super.key});
+  final bool isTab;
+  const HistoryScreen({super.key, this.isTab = false});
 
   @override
-  State<HistoryScreen> createState() => _HistoryScreenState();
+  HistoryScreenState createState() => HistoryScreenState();
 }
 
-class _HistoryScreenState extends State<HistoryScreen> {
+class HistoryScreenState extends State<HistoryScreen> {
   HistoryType _type = HistoryType.koper;
   late Future<List<dynamic>> _futureScans;
   String? _currentKloter;
@@ -24,6 +25,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   void initState() {
     super.initState();
+    _loadData();
+  }
+
+  void reload() {
     _loadData();
   }
 
@@ -106,6 +111,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Scaffold(
       backgroundColor: _pageBg,
       appBar: AppBar(
+        automaticallyImplyLeading: !widget.isTab,
         elevation: 0,
         backgroundColor: _mainColor,
         foregroundColor: Colors.white,
@@ -267,7 +273,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 return RefreshIndicator(
                   onRefresh: () async => _loadData(),
                   child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
                     physics: const AlwaysScrollableScrollPhysics(),
                     itemCount: scans.length,
                     itemBuilder: (context, index) {

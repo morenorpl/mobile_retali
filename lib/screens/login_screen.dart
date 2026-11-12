@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
+import '../services/presence_service.dart';
 import 'package:mobile_retali/screens/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -70,6 +71,7 @@ class _LoginScreenState extends State<LoginScreen>
     if (result['success'] == true) {
       NotificationService.setupSupabaseRealtime();
       NotificationService.checkAndTriggerPendingNotifications();
+      PresenceService.start();
 
       Navigator.pushReplacement(
         context,

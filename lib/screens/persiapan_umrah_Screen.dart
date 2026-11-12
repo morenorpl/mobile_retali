@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'persiapan_diniyah_screen.dart'; // Import halaman tujuan
+import 'persiapan_diniyah_screen.dart';
+import 'persiapan_teknis_screen.dart';
 
 class PersiapanUmrahScreen extends StatelessWidget {
   const PersiapanUmrahScreen({super.key});
@@ -65,7 +66,12 @@ class PersiapanUmrahScreen extends StatelessWidget {
               title: "Persiapan Teknis",
               imagePath: "assets/diniyah/teknis.png",
               onTap: () {
-                // TODO: Navigasi ke Persiapan Teknis
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const PersiapanTeknisScreen(),
+                  ),
+                );
               },
             ),
           ],

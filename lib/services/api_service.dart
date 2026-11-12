@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/notification_model.dart';
+import 'presence_service.dart';
 import 'supabase_service.dart';
 
 class ApiService {
@@ -73,6 +74,10 @@ class ApiService {
   }
 
   static Future<void> logout() async {
+    try {
+      await PresenceService.setOfflineNow();
+    } catch (_) {}
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     try {

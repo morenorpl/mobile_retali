@@ -5,7 +5,7 @@ import 'package:mobile_retali/screens/itinerary/itinerary_widgets.dart';
 
 class ItineraryDetailPage extends StatefulWidget {
   final ItineraryService service;
-  final int id;
+  final dynamic id;
 
   const ItineraryDetailPage({
     super.key,
@@ -641,6 +641,32 @@ class _DayContent extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                             color: Colors.black87,
                           ),
+                        ),
+                      ),
+                    if (item.location != null &&
+                        item.location!.isNotEmpty &&
+                        item.location != item.title)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.location_on_outlined,
+                              size: 14,
+                              color: AppTheme.brand,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                item.location!,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.brand.withOpacity(0.9),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     if (item.content != null &&

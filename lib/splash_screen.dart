@@ -6,6 +6,7 @@ import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/api_service.dart';
 import 'services/notification_service.dart';
+import 'services/presence_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -136,6 +137,7 @@ class _SplashScreenState extends State<SplashScreen>
     if (token != null && token.isNotEmpty) {
       NotificationService.setupSupabaseRealtime();
       NotificationService.checkAndTriggerPendingNotifications();
+      PresenceService.start();
 
       Navigator.pushReplacement(
         context,

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mobile_retali/services/api_service.dart';
 import 'package:mobile_retali/screens/login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+  final bool isTab;
+  const ProfileScreen({super.key, this.isTab = false});
 
   String _kloterLabel(String? raw) {
     switch (raw) {
@@ -49,8 +51,7 @@ class ProfileScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.clear();
+              await ApiService.logout();
 
               if (context.mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
@@ -161,6 +162,7 @@ class ProfileScreen extends StatelessWidget {
 
         return Scaffold(
           appBar: AppBar(
+            automaticallyImplyLeading: !isTab,
             title: const Text(
               "Profil Saya",
               style: TextStyle(
@@ -301,7 +303,7 @@ class ProfileScreen extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 32),
                             _buildField(
                               "Nama Lengkap",
                               Icons.person_outline_rounded,
@@ -373,7 +375,7 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),

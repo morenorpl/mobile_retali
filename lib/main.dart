@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'services/notification_service.dart';
+import 'services/presence_service.dart';
 import 'services/supabase_service.dart';
 import 'splash_screen.dart';
 
@@ -17,6 +18,9 @@ Future<void> main() async {
 
   // Inisialisasi Notification Service (Local Notification + Supabase Realtime)
   await NotificationService.init();
+
+  // Inisialisasi Presence Service (Aktif / Non-aktif status monitoring)
+  PresenceService.init();
 
   runApp(const MyApp());
 }
