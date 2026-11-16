@@ -32,7 +32,7 @@ class JamaahAttendanceService {
       try {
         final grupRows = await client
             .from('attendance_grup')
-            .select()
+            .select('*, attendance_user(id, attendance_status)')
             .order('created_at', ascending: false);
 
         if (grupRows.isNotEmpty) {
@@ -45,9 +45,25 @@ class JamaahAttendanceService {
 
             final String sesi = m['sesi']?.toString() ?? 'Sesi Absensi';
             final String kloter = m['kloter']?.toString() ?? 'Kloter Umum';
+            final users = m['attendance_user'];
             final int total = (m['total_jamaah'] is int)
                 ? m['total_jamaah']
-                : int.tryParse('${m['total_jamaah']}') ?? 0;
+                : int.tryParse('${m['total_jamaah']}') ??
+                    (users is List ? users.length : 0);
+
+            // Cek apakah masih ada yang belum_hadir
+            // Jika ada jamaah dan tidak ada satupun yang statusnya belum_hadir, maka is_done = true
+            bool isDone = false;
+            if (users is List && users.isNotEmpty) {
+              final bool hasBelumHadir = users.any((u) {
+                final status = (u['attendance_status'] ?? 'belum_hadir')
+                    .toString()
+                    .toLowerCase()
+                    .trim();
+                return status == 'belum_hadir' || status.isEmpty;
+              });
+              isDone = !hasBelumHadir;
+            }
 
             result.add({
               'id': id,
@@ -57,7 +73,7 @@ class JamaahAttendanceService {
               'tanggal_operasional': m['created_at']?.toString() ?? '',
               'sesi_lengkap': sesi,
               'jamaah_count': total,
-              'is_done': false,
+              'is_done': isDone,
             });
           }
           debugPrint('✅ [JamaahAttendanceService] Loaded ${result.length} groups from Supabase');
@@ -95,12 +111,36 @@ class JamaahAttendanceService {
 
       if (resp.statusCode == 200) {
         final body = jsonDecode(resp.body);
+        List<dynamic> rawList = [];
         if (body is Map && body['data'] is List) {
-          return body['data'];
+          rawList = body['data'];
+        } else if (body is List) {
+          rawList = body;
         }
-        if (body is List) {
-          return body;
+
+        final List<Map<String, dynamic>> processedList = [];
+        for (final item in rawList) {
+          if (item is Map) {
+            final m = Map<String, dynamic>.from(item);
+            if (!m.containsKey('is_done')) {
+              final users = m['attendance_user'] ?? m['jamaah'];
+              if (users is List && users.isNotEmpty) {
+                final bool hasBelumHadir = users.any((u) {
+                  final status = (u['attendance_status'] ?? u['status'] ?? 'belum_hadir')
+                      .toString()
+                      .toLowerCase()
+                      .trim();
+                  return status == 'belum_hadir' || status.isEmpty;
+                });
+                m['is_done'] = !hasBelumHadir;
+              } else {
+                m['is_done'] = false;
+              }
+            }
+            processedList.add(m);
+          }
         }
+        return processedList;
       }
     } catch (e) {
       debugPrint('⚠️ [JamaahAttendanceService] REST fetch error: $e');
