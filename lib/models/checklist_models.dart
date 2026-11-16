@@ -140,6 +140,9 @@ class ChecklistQuestion {
 class ChecklistDetail {
   final dynamic id;
   final String title;
+  final String? description;
+  final DateTime? opensAt;
+  final DateTime? closesAt;
   final String status;
   final bool submitted;
   final List<ChecklistQuestion> questions;
@@ -149,6 +152,9 @@ class ChecklistDetail {
   ChecklistDetail({
     required this.id,
     required this.title,
+    this.description,
+    this.opensAt,
+    this.closesAt,
     required this.status,
     required this.submitted,
     required this.questions,
@@ -156,17 +162,53 @@ class ChecklistDetail {
     this.assignmentId,
   });
 
+  bool get canWork {
+    if (submitted) return false;
+    final now = DateTime.now();
+    if (opensAt != null && now.isBefore(opensAt!)) return false;
+    if (closesAt != null && now.isAfter(closesAt!)) return false;
+    final st = status.toLowerCase();
+    return st == 'dibuka' || st == 'published' || st == 'active';
+  }
+
   factory ChecklistDetail.fromJson(Map<String, dynamic> j) {
+    DateTime? parseDate(dynamic val) {
+      if (val == null) return null;
+      try {
+        return DateTime.parse(val.toString()).toLocal();
+      } catch (_) {
+        return null;
+      }
+    }
+
     final questionsRaw = (j['questions'] ?? []) as List;
     final isDone = j['done_at'] != null ||
         j['submitted'] == true ||
         j['submitted_at'] != null ||
         j['status'] == 'completed';
 
+    final opens = parseDate(j['opens_at']);
+    final closes = parseDate(j['closes_at']);
+
+    final now = DateTime.now();
+    String st = (j['status'] ?? 'dibuka').toString().toLowerCase();
+    if (st == 'published' || st == 'active' || st == 'dibuka') {
+      if (opens != null && now.isBefore(opens)) {
+        st = 'belum_dibuka';
+      } else if (closes != null && now.isAfter(closes)) {
+        st = 'ditutup';
+      } else {
+        st = 'dibuka';
+      }
+    }
+
     return ChecklistDetail(
       id: j['id'],
       title: (j['title'] ?? '') as String,
-      status: (j['status'] ?? 'dibuka') as String,
+      description: j['description'] as String?,
+      opensAt: opens,
+      closesAt: closes,
+      status: st,
       submitted: isDone,
       questions: questionsRaw
           .map((e) => ChecklistQuestion.fromJson(e as Map<String, dynamic>))

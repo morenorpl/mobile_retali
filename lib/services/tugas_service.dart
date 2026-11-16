@@ -341,8 +341,29 @@ class TugasService {
           task = assignment['checklist_tasks'] as Map<String, dynamic>?;
           isSubmitted = assignment['status'] == 'completed' || assignment['submitted_at'] != null;
         } else {
-          // Jika id yang dioper adalah task_id
-          task = await client
+          // Coba cari assignment berdasarkan task_id dan logged in user_id
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            final userId = prefs.getString("user_id") ?? prefs.getString("id");
+            if (userId != null && userId.isNotEmpty) {
+              assignment = await client
+                  .from('checklist_assignments')
+                  .select('*, checklist_tasks(*)')
+                  .eq('task_id', idStr)
+                  .eq('recipient_id', userId)
+                  .maybeSingle();
+
+              if (assignment != null) {
+                assignmentId = assignment['id']?.toString();
+                taskId = assignment['task_id']?.toString() ?? idStr;
+                task = assignment['checklist_tasks'] as Map<String, dynamic>?;
+                isSubmitted = assignment['status'] == 'completed' || assignment['submitted_at'] != null;
+              }
+            }
+          } catch (_) {}
+
+          // Jika belum ketemu task-nya, ambil langsung dari checklist_tasks
+          task ??= await client
               .from('checklist_tasks')
               .select('*')
               .eq('id', idStr)
@@ -360,12 +381,38 @@ class TugasService {
               .map((q) => ChecklistQuestion.fromJson(q as Map<String, dynamic>))
               .toList();
 
+          DateTime? parseDate(dynamic val) {
+            if (val == null) return null;
+            try {
+              return DateTime.parse(val.toString()).toLocal();
+            } catch (_) {
+              return null;
+            }
+          }
+
+          final opensAt = parseDate(task['opens_at']);
+          final closesAt = parseDate(task['closes_at']);
+          final now = DateTime.now();
+          String taskStatus = (task['status'] ?? 'dibuka').toString().toLowerCase();
+          if (taskStatus == 'published' || taskStatus == 'active' || taskStatus == 'dibuka') {
+            if (opensAt != null && now.isBefore(opensAt)) {
+              taskStatus = 'belum_dibuka';
+            } else if (closesAt != null && now.isAfter(closesAt)) {
+              taskStatus = 'ditutup';
+            } else {
+              taskStatus = 'dibuka';
+            }
+          }
+
           return ChecklistDetail(
             id: assignmentId ?? taskId,
             taskId: taskId,
             assignmentId: assignmentId,
             title: (task['title'] ?? 'Checklist Detail').toString(),
-            status: (task['status'] ?? 'dibuka').toString(),
+            description: task['description'] as String?,
+            opensAt: opensAt,
+            closesAt: closesAt,
+            status: taskStatus,
             submitted: isSubmitted,
             questions: questions,
           );

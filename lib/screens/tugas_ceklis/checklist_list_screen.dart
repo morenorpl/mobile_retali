@@ -226,44 +226,50 @@ class _ChecklistListScreenState extends State<ChecklistListScreen> {
                 padding: const EdgeInsets.all(16),
                 itemCount: displayItems.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 16),
-                itemBuilder: (_, i) => _ChecklistCard(
-                  data: displayItems[i],
-                  onKerjakan: displayItems[i].canWork
-                      ? () async {
-                          final changed = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ChecklistDetailScreen(
-                                checklistId: displayItems[i].id,
-                                title: displayItems[i].title,
-                              ),
-                            ),
-                          );
+                itemBuilder: (_, i) {
+                  final item = displayItems[i];
+                  Future<void> openDetail() async {
+                    final changed = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChecklistDetailScreen(
+                          checklistId: item.id,
+                          title: item.title,
+                          summary: item,
+                        ),
+                      ),
+                    );
 
-                          if (changed == true) {
-                            // OPTIMISTIC UI: Langsung ijo-in tanpa nunggu API
-                            setState(() {
-                              _items[i] = _items[i].copyWith(
-                                doneAt: DateTime.now(),
-                              );
-                              _future = Future.value(_items);
-                            });
+                    if (changed == true) {
+                      // OPTIMISTIC UI: Langsung update status selesai
+                      setState(() {
+                        _items[i] = _items[i].copyWith(
+                          doneAt: DateTime.now(),
+                        );
+                        _future = Future.value(_items);
+                      });
 
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Checklist berhasil diselesaikan 🎉',
-                                ),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Checklist berhasil diselesaikan 🎉',
+                          ),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
 
-                            // Trigger refresh data asli dari server
-                            _loadData();
-                          }
-                        }
-                      : null,
-                ),
+                      // Trigger refresh data asli dari server
+                      _loadData();
+                    }
+                  }
+
+                  return _ChecklistCard(
+                    data: item,
+                    onTap: openDetail,
+                    onKerjakan: item.canWork ? openDetail : null,
+                  );
+                },
               );
             },
           ),
@@ -279,7 +285,8 @@ class _ChecklistListScreenState extends State<ChecklistListScreen> {
 class _ChecklistCard extends StatelessWidget {
   final ChecklistSummary data;
   final VoidCallback? onKerjakan;
-  const _ChecklistCard({required this.data, this.onKerjakan});
+  final VoidCallback? onTap;
+  const _ChecklistCard({required this.data, this.onKerjakan, this.onTap});
 
   String _formatDate(DateTime date) {
     return DateFormat('EEEE, d MMMM yyyy • HH:mm', 'id_ID').format(date);
@@ -321,7 +328,7 @@ class _ChecklistCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -331,9 +338,13 @@ class _ChecklistCard extends StatelessWidget {
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         color: Colors.white,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -441,7 +452,8 @@ class _ChecklistCard extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _badge(String text, Color color, IconData icon) {
