@@ -8,7 +8,6 @@ import 'package:mobile_retali/screens/scan_screen.dart';
 import 'package:mobile_retali/screens/riwayat_scan/history_screen.dart';
 import 'package:mobile_retali/screens/profile_screen.dart';
 import 'package:mobile_retali/screens/curriculum_tour_leader_screen.dart';
-import 'package:mobile_retali/screens/tugas_tourleader/tugas_screen.dart';
 import 'package:mobile_retali/screens/persiapan_umrah_screen.dart';
 import 'package:mobile_retali/screens/quran/quran_list_screen.dart';
 import 'package:mobile_retali/screens/absensi_screen.dart';
@@ -22,6 +21,7 @@ import 'package:mobile_retali/screens/tugas_ceklis/checklist_list_screen.dart';
 import 'package:mobile_retali/widgets/running_notification_bar.dart';
 import 'package:mobile_retali/widgets/dual_clock_banner.dart';
 import 'package:mobile_retali/screens/itinerary/itinerary_list_page.dart';
+import 'faq_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -178,76 +178,104 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Salam + Notifikasi
+                  // Salam + FAQ + Notifikasi
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Assalamualaikum, ${_name.isNotEmpty ? _name : 'User'}!",
-                            style: const TextStyle(
-                              fontSize: 20,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Assalamualaikum, ${_name.isNotEmpty ? _name : 'User'}!",
+                              style: const TextStyle(
+                                fontSize: 20,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "Anda masuk sebagai $_roleDisplay",
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Colors.white70,
+                            const SizedBox(height: 4),
+                            Text(
+                              "Anda masuk sebagai $_roleDisplay",
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.white70,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
 
-                      // 🔔 Notifikasi
-                      Stack(
+                      // ❓ FAQ + 🔔 Notifikasi
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
+                          // Tombol FAQ
                           IconButton(
-                            onPressed: () async {
-                              await Navigator.push(
+                            onPressed: () {
+                              Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const NotificationsScreen(),
+                                  builder: (_) => const FaqScreen(),
                                 ),
                               );
-                              _loadUnread();
                             },
+                            tooltip: "Pusat Bantuan (FAQ)",
                             icon: const Icon(
-                              Icons.notifications,
+                              Icons.help_outline_rounded,
                               color: Colors.white,
-                              size: 30,
+                              size: 28,
                             ),
                           ),
-                          if (_unreadCount > 0)
-                            Positioned(
-                              right: 6,
-                              top: 6,
-                              child: Container(
-                                padding: const EdgeInsets.all(3),
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                ),
-                                constraints: const BoxConstraints(
-                                  minWidth: 16,
-                                  minHeight: 16,
-                                ),
-                                child: Text(
-                                  '$_unreadCount',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
+
+                          // 🔔 Notifikasi
+                          Stack(
+                            children: [
+                              IconButton(
+                                onPressed: () async {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const NotificationsScreen(),
+                                    ),
+                                  );
+                                  _loadUnread();
+                                },
+                                icon: const Icon(
+                                  Icons.notifications,
+                                  color: Colors.white,
+                                  size: 30,
                                 ),
                               ),
-                            ),
+                              if (_unreadCount > 0)
+                                Positioned(
+                                  right: 6,
+                                  top: 6,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 16,
+                                      minHeight: 16,
+                                    ),
+                                    child: Text(
+                                      '$_unreadCount',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ],
                       ),
                     ],

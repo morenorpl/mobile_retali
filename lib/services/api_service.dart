@@ -323,11 +323,21 @@ class ApiService {
             } catch (_) {}
 
             try {
-              final profile = await supabaseClient
-                  .from('profiles')
-                  .select('*, kloter(*)')
-                  .or('email.eq.$email,id.eq.$userId')
-                  .maybeSingle();
+              Map<String, dynamic>? profile;
+              if (email.isNotEmpty) {
+                profile = await supabaseClient
+                    .from('profiles')
+                    .select('*, kloter(*)')
+                    .eq('email', email)
+                    .maybeSingle();
+              }
+              if (profile == null && _isValidUuid(userId)) {
+                profile = await supabaseClient
+                    .from('profiles')
+                    .select('*, kloter(*)')
+                    .eq('id', userId)
+                    .maybeSingle();
+              }
 
               if (profile != null) {
                 userId = profile['id']?.toString() ?? userId;
@@ -571,23 +581,28 @@ class ApiService {
   // =====================
   // GET PASSPORT SCANS
   // =====================
-  static Future<List<dynamic>> getPassportScans({String? kloter}) async {
+  static Future<List<dynamic>> getPassportScans({String? kloter, String? userId}) async {
     final targetKloter = kloter ?? await getCurrentUserKloter();
+    final currentUserId = userId ?? await getCurrentUserId();
     List<dynamic> list = [];
 
     // 1. Ambil dari Supabase tabel passport_scans via Supabase Client
     final client = SupabaseService.client;
     if (client != null) {
       try {
-        final res = await client
-            .from('passport_scans')
-            .select('*')
-            .order('created_at', ascending: false);
+        var query = client.from('passport_scans').select('*');
+
+        if (currentUserId != null && currentUserId.isNotEmpty) {
+          query = query.eq('scanned_by', currentUserId);
+        }
+
+        final res = await query.order('created_at', ascending: false);
 
         list = res.map((row) {
           final map = Map<String, dynamic>.from(row as Map);
           map['owner_phone'] = map['phone'];
           map['scanned_at'] = map['scanned_at'] ?? map['created_at'];
+          map['scanned_by'] = map['scanned_by'];
           return map;
         }).toList();
       } catch (e) {
@@ -596,14 +611,19 @@ class ApiService {
     }
 
     // 2. Direct REST Fallback ke Supabase
-    if (list.isEmpty) {
+    if (list.isEmpty && SupabaseConfig.isConfigured) {
       try {
-        final restData = await SupabaseService.restGet('passport_scans');
+        String path = 'passport_scans';
+        if (currentUserId != null && currentUserId.isNotEmpty) {
+          path = 'passport_scans?scanned_by=eq.$currentUserId';
+        }
+        final restData = await SupabaseService.restGet(path);
         if (restData.isNotEmpty) {
           list = restData.map((row) {
             final map = Map<String, dynamic>.from(row as Map);
             map['owner_phone'] = map['phone'];
             map['scanned_at'] = map['scanned_at'] ?? map['created_at'];
+            map['scanned_by'] = map['scanned_by'];
             return map;
           }).toList();
         }
@@ -630,18 +650,22 @@ class ApiService {
       } catch (_) {}
     }
 
-    // Filter berdasarkan kloter petugas yang sedang login
-    if (targetKloter != null && targetKloter.isNotEmpty && targetKloter != '-' && targetKloter != 'ALL') {
-      return list.where((scan) {
-        final itemKloter = (scan['kloter'] ?? '').toString();
-        return isSameKloter(targetKloter, itemKloter);
-      }).toList();
-    } else if (targetKloter == null || targetKloter.isEmpty || targetKloter == '-') {
-      // Petugas belum memiliki kloter, tidak menampilkan kloter lain
-      return [];
-    }
+    // Filter berdasarkan kloter & akun petugas yang sedang login
+    return list.where((scan) {
+      final itemKloter = (scan['kloter'] ?? '').toString();
+      final itemScannedBy = (scan['scanned_by'] ?? '').toString();
 
-    return list;
+      // Filter akun: hanya tampilkan data yang discan oleh akun yang sedang login
+      if (currentUserId != null && currentUserId.isNotEmpty && itemScannedBy.isNotEmpty) {
+        if (itemScannedBy != currentUserId) return false;
+      }
+
+      // Filter kloter petugas
+      if (targetKloter != null && targetKloter.isNotEmpty && targetKloter != '-' && targetKloter != 'ALL') {
+        return isSameKloter(targetKloter, itemKloter);
+      }
+      return true;
+    }).toList();
   }
 
   // =====================
@@ -800,6 +824,14 @@ class ApiService {
     }
   }
 
+  static bool _isValidUuid(String? str) {
+    if (str == null || str.isEmpty) return false;
+    final uuidRegex = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    );
+    return uuidRegex.hasMatch(str.trim());
+  }
+
   // =====================
   // GET CURRENT USER ID
   // =====================
@@ -807,36 +839,86 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     String? userId = prefs.getString("user_id") ?? prefs.getString("id");
 
-    if (userId != null && userId.isNotEmpty && userId != '-') {
-      return userId;
+    if (_isValidUuid(userId)) {
+      return userId!.trim();
     }
 
-    // Coba ambil dari Supabase Auth
+    // 1. Coba ambil dari Supabase Auth
     final supaUser = SupabaseService.client?.auth.currentUser;
-    if (supaUser != null && supaUser.id.isNotEmpty) {
+    if (supaUser != null && _isValidUuid(supaUser.id)) {
       await prefs.setString("id", supaUser.id);
       await prefs.setString("user_id", supaUser.id);
       return supaUser.id;
     }
 
-    // Coba sinkronisasi dari profile berdasarkan email
+    // 2. Coba sinkronisasi dari profile berdasarkan email
     final email = prefs.getString("email");
     if (email != null && email.isNotEmpty && SupabaseService.client != null) {
       try {
         final prof = await SupabaseService.client!
             .from('profiles')
             .select('id')
-            .eq('email', email)
+            .eq('email', email.trim())
             .maybeSingle();
 
-        if (prof != null && prof['id'] != null) {
-          final foundId = prof['id'].toString();
+        if (prof != null && prof['id'] != null && _isValidUuid(prof['id'].toString())) {
+          final foundId = prof['id'].toString().trim();
           await prefs.setString("id", foundId);
           await prefs.setString("user_id", foundId);
           return foundId;
         }
       } catch (e) {
-        debugPrint("⚠️ Gagal sync profile id: $e");
+        debugPrint("⚠️ Gagal sync profile id dari email: $e");
+      }
+    }
+
+    // 3. Coba sinkronisasi dari profile berdasarkan nama / username
+    final name = prefs.getString("name");
+    if (name != null && name.isNotEmpty && name != '-' && SupabaseService.client != null) {
+      try {
+        final prof = await SupabaseService.client!
+            .from('profiles')
+            .select('id')
+            .ilike('username', name.trim())
+            .maybeSingle();
+
+        if (prof != null && prof['id'] != null && _isValidUuid(prof['id'].toString())) {
+          final foundId = prof['id'].toString().trim();
+          await prefs.setString("id", foundId);
+          await prefs.setString("user_id", foundId);
+          return foundId;
+        }
+      } catch (e) {
+        debugPrint("⚠️ Gagal sync profile id dari nama: $e");
+      }
+    }
+
+    // 4. Fallback kloter: jika petugas bertugas di kloter tertentu, ambil profile TL/Muthawif di kloter tsb
+    final kloter = prefs.getString("kloter");
+    if (kloter != null && kloter.isNotEmpty && kloter != '-' && SupabaseService.client != null) {
+      try {
+        final kloterRow = await SupabaseService.client!
+            .from('kloter')
+            .select('id')
+            .ilike('name', kloter.trim())
+            .maybeSingle();
+        if (kloterRow != null && kloterRow['id'] != null) {
+          final p = await SupabaseService.client!
+              .from('profiles')
+              .select('id')
+              .eq('kloter_id', kloterRow['id'])
+              .inFilter('role', ['tour_leader', 'muthawif'])
+              .limit(1)
+              .maybeSingle();
+          if (p != null && p['id'] != null && _isValidUuid(p['id'].toString())) {
+            final foundId = p['id'].toString().trim();
+            await prefs.setString("id", foundId);
+            await prefs.setString("user_id", foundId);
+            return foundId;
+          }
+        }
+      } catch (e) {
+        debugPrint("⚠️ Gagal sync profile id dari kloter: $e");
       }
     }
 
@@ -1075,25 +1157,44 @@ class ApiService {
     final client = SupabaseService.client;
     if (client != null) {
       try {
-        final prefs = await SharedPreferences.getInstance();
         final userKloter = await getCurrentUserKloter();
-        final defaultKloter = (userKloter != null && userKloter.trim().isNotEmpty && userKloter.trim() != '-')
-            ? userKloter.trim()
-            : (prefs.getString("kloter") ?? "-");
+        final currentUserId = await getCurrentUserId();
 
         String kodeKoper = "";
         String namaPemilik = "-";
         String nomorTelepon = "-";
-        String kloter = defaultKloter;
+        String? qrKloter;
 
         bool parsed = false;
         try {
           final j = jsonDecode(qrRaw);
           if (j is Map) {
-            kodeKoper = (j['kode_koper'] ?? j['koper_code'] ?? j['code'] ?? '').toString().trim();
-            namaPemilik = (j['nama_pemilik'] ?? j['owner_name'] ?? j['name'] ?? '-').toString().trim();
-            nomorTelepon = (j['nomor_telepon'] ?? j['owner_phone'] ?? j['phone'] ?? '-').toString().trim();
-            kloter = (j['kloter'] ?? defaultKloter).toString().trim();
+            kodeKoper = (j['kode_koper'] ??
+                    j['koper_code'] ??
+                    j['code'] ??
+                    j['kode'] ??
+                    '')
+                .toString()
+                .trim();
+            namaPemilik = (j['nama_pemilik'] ??
+                    j['owner_name'] ??
+                    j['name'] ??
+                    j['nama'] ??
+                    '-')
+                .toString()
+                .trim();
+            nomorTelepon = (j['nomor_telepon'] ??
+                    j['owner_phone'] ??
+                    j['phone'] ??
+                    j['no_hp'] ??
+                    j['telepon'] ??
+                    '-')
+                .toString()
+                .trim();
+            final kVal = j['kloter'] ?? j['kloter_name'] ?? j['nama_kloter'] ?? j['kloterName'];
+            if (kVal != null && kVal.toString().trim().isNotEmpty && kVal.toString().trim() != '-') {
+              qrKloter = kVal.toString().trim();
+            }
             parsed = true;
           }
         } catch (_) {}
@@ -1101,27 +1202,152 @@ class ApiService {
         if (!parsed) {
           final parts = qrRaw.split('|').map((e) => e.trim()).toList();
           kodeKoper = parts.isNotEmpty ? parts[0] : qrRaw.trim();
-          if (parts.length >= 2) namaPemilik = parts[1];
-          if (parts.length >= 3) nomorTelepon = parts[2];
-          if (parts.length >= 4) kloter = parts[3];
+
+          for (int i = 1; i < parts.length; i++) {
+            final part = parts[i];
+            if (part.toLowerCase().contains('kloter') ||
+                RegExp(r'^kloter[\s_-]?\d+', caseSensitive: false).hasMatch(part)) {
+              qrKloter = part;
+            } else if (RegExp(r'^[0-9+]{8,15}$').hasMatch(part)) {
+              nomorTelepon = part;
+            } else if (namaPemilik == '-') {
+              namaPemilik = part;
+            }
+          }
+
+          if (qrKloter == null && parts.length >= 4 && parts[3].isNotEmpty && parts[3] != '-') {
+            qrKloter = parts[3];
+          }
+          if (nomorTelepon == '-' && parts.length >= 3 && qrKloter != parts[2]) {
+            nomorTelepon = parts[2];
+          }
+          if (namaPemilik == '-' && parts.length >= 2 && qrKloter != parts[1]) {
+            namaPemilik = parts[1];
+          }
         }
 
         if (kodeKoper.isEmpty) {
           kodeKoper = qrRaw.trim();
         }
 
-        // Cek apakah koper sudah pernah discan / ada di database
-        final existing = await client
+        // Cek data koper dari database jika info kloter belum ada di QR
+        if (qrKloter == null || qrKloter.isEmpty) {
+          try {
+            final prevKoper = await client
+                .from('koper')
+                .select('kloter, nama_pemilik, nomor_telepon')
+                .ilike('kode_koper', kodeKoper.trim())
+                .maybeSingle();
+            if (prevKoper != null && prevKoper['kloter'] != null) {
+              qrKloter = prevKoper['kloter'].toString().trim();
+              if (namaPemilik == '-' && prevKoper['nama_pemilik'] != null) {
+                namaPemilik = prevKoper['nama_pemilik'].toString().trim();
+              }
+              if (nomorTelepon == '-' && prevKoper['nomor_telepon'] != null) {
+                nomorTelepon = prevKoper['nomor_telepon'].toString().trim();
+              }
+            }
+          } catch (_) {}
+        }
+
+        // 1. RESTRICTION: Cek apakah petugas memiliki kloter
+        if (userKloter == null || userKloter.trim().isEmpty || userKloter.trim() == '-') {
+          return {
+            'status': 'error',
+            'code': 403,
+            'message': 'Akun Anda belum memiliki kloter yang ditugaskan.',
+          };
+        }
+
+        // 2. RESTRICTION: Cek apakah kloter di QR cocok dengan kloter akun petugas
+        if (qrKloter != null && qrKloter.isNotEmpty && qrKloter != '-') {
+          if (!isSameKloter(userKloter, qrKloter)) {
+            return {
+              'status': 'error',
+              'code': 403,
+              'message': 'Kloter tidak sesuai!\nQR ini milik $qrKloter, sedangkan Anda bertugas di $userKloter.',
+            };
+          }
+        }
+
+        final targetKloter = (qrKloter != null && qrKloter.isNotEmpty && qrKloter != '-')
+            ? qrKloter
+            : userKloter.trim();
+
+        // 3. CEK DATABASE: Apakah koper ini sudah pernah discan sebelumnya (oleh diri sendiri atau petugas lain)?
+        final existingRows = await client
             .from('koper')
             .select('*')
-            .eq('kode_koper', kodeKoper)
-            .maybeSingle();
+            .eq('kode_koper', kodeKoper);
 
-        if (existing != null) {
+        if (existingRows.isNotEmpty) {
+          final existing = existingRows.first;
+
+          // Cek kloter data koper yang ada
+          final existingKloter = existing['kloter']?.toString();
+          if (existingKloter != null && existingKloter.isNotEmpty && existingKloter != '-') {
+            if (!isSameKloter(userKloter, existingKloter)) {
+              return {
+                'status': 'error',
+                'code': 403,
+                'message': 'Kloter tidak sesuai!\nKoper ini terdaftar di $existingKloter, sedangkan Anda bertugas di $userKloter.',
+              };
+            }
+          }
+
+          // JIKA SUDAH ADA DI DATABASE TAPI BELUM ADA PETUGAS (scanned_by masih null/kosong):
+          // Lakukan UPDATE scanned_by dengan currentUserId petugas yang sedang scan sekarang!
+          final existingScannedBy = existing['scanned_by']?.toString();
+          if (existingScannedBy == null || existingScannedBy.trim().isEmpty) {
+            final nowIso = DateTime.now().toUtc().toIso8601String();
+            final updated = await client.from('koper').update({
+              'scanned_by': currentUserId,
+              'created_at': nowIso,
+            }).eq('id', existing['id']).select().single();
+
+            return {
+              'status': 'success',
+              'success': true,
+              'code': 200,
+              'data': {
+                'koper_code': updated['kode_koper'] ?? kodeKoper,
+                'kode_koper': updated['kode_koper'] ?? kodeKoper,
+                'owner_name': updated['nama_pemilik'] ?? existing['nama_pemilik'],
+                'nama_pemilik': updated['nama_pemilik'] ?? existing['nama_pemilik'],
+                'owner_phone': updated['nomor_telepon'] ?? existing['nomor_telepon'],
+                'nomor_telepon': updated['nomor_telepon'] ?? existing['nomor_telepon'],
+                'kloter': updated['kloter'] ?? existingKloter ?? targetKloter,
+                'scanned_by': updated['scanned_by'] ?? currentUserId,
+                'scanned_at': updated['created_at'] ?? nowIso,
+                'created_at': updated['created_at'] ?? nowIso,
+              },
+            };
+          }
+
+          // Cari info petugas yang sudah melakukan scan
+          String scannerName = "petugas lain";
+          final scannedBy = existing['scanned_by']?.toString();
+          if (scannedBy != null && scannedBy.isNotEmpty) {
+            if (currentUserId != null && scannedBy == currentUserId) {
+              scannerName = "Anda sendiri";
+            } else {
+              try {
+                final p = await client
+                    .from('profiles')
+                    .select('username')
+                    .eq('id', scannedBy)
+                    .maybeSingle();
+                if (p != null && p['username'] != null && p['username'].toString().trim().isNotEmpty) {
+                  scannerName = p['username'].toString().trim();
+                }
+              } catch (_) {}
+            }
+          }
+
           return {
             'status': 'error',
             'code': 409,
-            'message': 'Koper sudah pernah discan',
+            'message': 'Koper sudah pernah discan oleh $scannerName di kloter ini',
             'data': {
               'koper_code': existing['kode_koper'],
               'kode_koper': existing['kode_koper'],
@@ -1130,6 +1356,7 @@ class ApiService {
               'owner_phone': existing['nomor_telepon'],
               'nomor_telepon': existing['nomor_telepon'],
               'kloter': existing['kloter'],
+              'scanned_by': existing['scanned_by'],
               'scanned_at': existing['created_at'],
               'created_at': existing['created_at'],
             },
@@ -1141,7 +1368,8 @@ class ApiService {
           'kode_koper': kodeKoper,
           'nama_pemilik': namaPemilik,
           'nomor_telepon': nomorTelepon,
-          'kloter': kloter,
+          'kloter': targetKloter,
+          'scanned_by': currentUserId,
           'created_at': nowIso,
         }).select().single();
 
@@ -1156,13 +1384,21 @@ class ApiService {
             'nama_pemilik': inserted['nama_pemilik'] ?? namaPemilik,
             'owner_phone': inserted['nomor_telepon'] ?? nomorTelepon,
             'nomor_telepon': inserted['nomor_telepon'] ?? nomorTelepon,
-            'kloter': inserted['kloter'] ?? kloter,
+            'kloter': inserted['kloter'] ?? targetKloter,
+            'scanned_by': inserted['scanned_by'] ?? currentUserId,
             'scanned_at': inserted['created_at'] ?? nowIso,
             'created_at': inserted['created_at'] ?? nowIso,
           },
         };
       } catch (e) {
         debugPrint('⚠️ Error storeScanFromRaw Supabase: $e');
+        if (SupabaseConfig.isConfigured) {
+          return {
+            'status': 'error',
+            'code': 500,
+            'message': 'Gagal menyimpan scan koper ke database: $e',
+          };
+        }
       }
     }
 
@@ -1220,25 +1456,46 @@ class ApiService {
     final client = SupabaseService.client;
     if (client != null) {
       try {
-        final prefs = await SharedPreferences.getInstance();
         final userKloter = await getCurrentUserKloter();
-        final defaultKloter = (userKloter != null && userKloter.trim().isNotEmpty && userKloter.trim() != '-')
-            ? userKloter.trim()
-            : (prefs.getString("kloter") ?? "-");
+        final currentUserId = await getCurrentUserId();
 
         String passportNumber = "";
         String ownerName = "-";
         String phone = "-";
-        String kloter = defaultKloter;
+        String? qrKloter;
 
         bool parsed = false;
         try {
           final j = jsonDecode(qrRaw);
           if (j is Map) {
-            passportNumber = (j['passport_number'] ?? j['passport'] ?? j['passportNumber'] ?? j['code'] ?? '').toString().trim();
-            ownerName = (j['owner_name'] ?? j['name'] ?? j['nama_pemilik'] ?? '-').toString().trim();
-            phone = (j['phone'] ?? j['owner_phone'] ?? j['nomor_telepon'] ?? '-').toString().trim();
-            kloter = (j['kloter'] ?? defaultKloter).toString().trim();
+            passportNumber = (j['passport_number'] ??
+                    j['passport'] ??
+                    j['passportNumber'] ??
+                    j['no_paspor'] ??
+                    j['nomor_paspor'] ??
+                    j['code'] ??
+                    '')
+                .toString()
+                .trim();
+            ownerName = (j['owner_name'] ??
+                    j['name'] ??
+                    j['nama'] ??
+                    j['nama_pemilik'] ??
+                    '-')
+                .toString()
+                .trim();
+            phone = (j['phone'] ??
+                    j['owner_phone'] ??
+                    j['nomor_telepon'] ??
+                    j['no_hp'] ??
+                    j['telepon'] ??
+                    '-')
+                .toString()
+                .trim();
+            final kVal = j['kloter'] ?? j['kloter_name'] ?? j['nama_kloter'] ?? j['kloterName'];
+            if (kVal != null && kVal.toString().trim().isNotEmpty && kVal.toString().trim() != '-') {
+              qrKloter = kVal.toString().trim();
+            }
             parsed = true;
           }
         } catch (_) {}
@@ -1246,33 +1503,177 @@ class ApiService {
         if (!parsed) {
           final parts = qrRaw.split('|').map((e) => e.trim()).toList();
           passportNumber = parts.isNotEmpty ? parts[0] : qrRaw.trim();
-          if (parts.length >= 2) ownerName = parts[1];
-          if (parts.length >= 3) phone = parts[2];
-          if (parts.length >= 4) kloter = parts[3];
+
+          for (int i = 1; i < parts.length; i++) {
+            final part = parts[i];
+            if (part.toLowerCase().contains('kloter') ||
+                RegExp(r'^kloter[\s_-]?\d+', caseSensitive: false).hasMatch(part)) {
+              qrKloter = part;
+            } else if (RegExp(r'^[0-9+]{8,15}$').hasMatch(part)) {
+              phone = part;
+            } else if (ownerName == '-') {
+              ownerName = part;
+            }
+          }
+
+          if (qrKloter == null && parts.length >= 4 && parts[3].isNotEmpty && parts[3] != '-') {
+            qrKloter = parts[3];
+          }
+          if (phone == '-' && parts.length >= 3 && qrKloter != parts[2]) {
+            phone = parts[2];
+          }
+          if (ownerName == '-' && parts.length >= 2 && qrKloter != parts[1]) {
+            ownerName = parts[1];
+          }
         }
 
         if (passportNumber.isEmpty) {
           passportNumber = qrRaw.trim();
         }
 
-        // Cek apakah paspor sudah pernah discan di database
-        final existing = await client
+        // Cek data jamaah di attendance_user jika info kloter belum ada di QR
+        if (qrKloter == null || qrKloter.isEmpty) {
+          try {
+            final attUser = await client
+                .from('attendance_user')
+                .select('kloter, jamaah_name, phone_number')
+                .ilike('passport_number', passportNumber.trim())
+                .maybeSingle();
+            if (attUser != null) {
+              if (attUser['kloter'] != null) {
+                qrKloter = attUser['kloter'].toString().trim();
+              }
+              if (ownerName == '-' && attUser['jamaah_name'] != null) {
+                ownerName = attUser['jamaah_name'].toString().trim();
+              }
+              if (phone == '-' && attUser['phone_number'] != null) {
+                phone = attUser['phone_number'].toString().trim();
+              }
+            }
+          } catch (_) {}
+        }
+
+        // Cek juga ke passport_scans jika pernah discan sebelumnya
+        if (qrKloter == null || qrKloter.isEmpty) {
+          try {
+            final prevScan = await client
+                .from('passport_scans')
+                .select('kloter, owner_name, phone')
+                .ilike('passport_number', passportNumber.trim())
+                .maybeSingle();
+            if (prevScan != null && prevScan['kloter'] != null) {
+              qrKloter = prevScan['kloter'].toString().trim();
+              if (ownerName == '-' && prevScan['owner_name'] != null) {
+                ownerName = prevScan['owner_name'].toString().trim();
+              }
+              if (phone == '-' && prevScan['phone'] != null) {
+                phone = prevScan['phone'].toString().trim();
+              }
+            }
+          } catch (_) {}
+        }
+
+        // 1. RESTRICTION: Cek apakah petugas memiliki kloter
+        if (userKloter == null || userKloter.trim().isEmpty || userKloter.trim() == '-') {
+          return {
+            'status': 'error',
+            'code': 403,
+            'message': 'Akun Anda belum memiliki kloter yang ditugaskan.',
+          };
+        }
+
+        // 2. RESTRICTION: Cek apakah kloter di QR cocok dengan kloter akun petugas
+        if (qrKloter != null && qrKloter.isNotEmpty && qrKloter != '-') {
+          if (!isSameKloter(userKloter, qrKloter)) {
+            return {
+              'status': 'error',
+              'code': 403,
+              'message': 'Kloter tidak sesuai!\nQR Paspor ini milik $qrKloter, sedangkan Anda bertugas di $userKloter.',
+            };
+          }
+        }
+
+        final targetKloter = (qrKloter != null && qrKloter.isNotEmpty && qrKloter != '-')
+            ? qrKloter
+            : userKloter.trim();
+
+        // 3. CEK DATABASE: Apakah paspor sudah pernah discan sebelumnya (oleh diri sendiri atau petugas lain)?
+        final existingRows = await client
             .from('passport_scans')
             .select('*')
-            .eq('passport_number', passportNumber)
-            .maybeSingle();
+            .eq('passport_number', passportNumber);
 
-        if (existing != null) {
+        if (existingRows.isNotEmpty) {
+          final existing = existingRows.first;
+
+          final existingKloter = existing['kloter']?.toString();
+          if (existingKloter != null && existingKloter.isNotEmpty && existingKloter != '-') {
+            if (!isSameKloter(userKloter, existingKloter)) {
+              return {
+                'status': 'error',
+                'code': 403,
+                'message': 'Kloter tidak sesuai!\nPaspor ini terdaftar di $existingKloter, sedangkan Anda bertugas di $userKloter.',
+              };
+            }
+          }
+
+          // JIKA SUDAH ADA DI DATABASE TAPI BELUM ADA PETUGAS (scanned_by masih null/kosong):
+          // Lakukan UPDATE scanned_by dengan currentUserId petugas yang sedang scan sekarang!
+          final existingScannedBy = existing['scanned_by']?.toString();
+          if (existingScannedBy == null || existingScannedBy.trim().isEmpty) {
+            final nowIso = DateTime.now().toUtc().toIso8601String();
+            final updated = await client.from('passport_scans').update({
+              'scanned_by': currentUserId,
+              'scanned_at': nowIso,
+            }).eq('id', existing['id']).select().single();
+
+            return {
+              'status': 'success',
+              'success': true,
+              'code': 200,
+              'data': {
+                'passport_number': updated['passport_number'] ?? passportNumber,
+                'owner_name': updated['owner_name'] ?? existing['owner_name'],
+                'owner_phone': updated['phone'] ?? existing['phone'],
+                'phone': updated['phone'] ?? existing['phone'],
+                'kloter': updated['kloter'] ?? existingKloter ?? targetKloter,
+                'scanned_by': updated['scanned_by'] ?? currentUserId,
+                'scanned_at': updated['scanned_at'] ?? nowIso,
+                'created_at': updated['created_at'] ?? nowIso,
+              },
+            };
+          }
+
+          String scannerName = "petugas lain";
+          final scannedBy = existing['scanned_by']?.toString();
+          if (scannedBy != null && scannedBy.isNotEmpty) {
+            if (currentUserId != null && scannedBy == currentUserId) {
+              scannerName = "Anda sendiri";
+            } else {
+              try {
+                final p = await client
+                    .from('profiles')
+                    .select('username')
+                    .eq('id', scannedBy)
+                    .maybeSingle();
+                if (p != null && p['username'] != null && p['username'].toString().trim().isNotEmpty) {
+                  scannerName = p['username'].toString().trim();
+                }
+              } catch (_) {}
+            }
+          }
+
           return {
             'status': 'error',
             'code': 409,
-            'message': 'Paspor sudah pernah discan',
+            'message': 'Paspor sudah pernah discan oleh $scannerName di kloter ini',
             'data': {
               'passport_number': existing['passport_number'],
               'owner_name': existing['owner_name'],
               'owner_phone': existing['phone'],
               'phone': existing['phone'],
               'kloter': existing['kloter'],
+              'scanned_by': existing['scanned_by'],
               'scanned_at': existing['scanned_at'] ?? existing['created_at'],
               'created_at': existing['created_at'],
             },
@@ -1284,7 +1685,8 @@ class ApiService {
           'passport_number': passportNumber,
           'owner_name': ownerName,
           'phone': phone,
-          'kloter': kloter,
+          'kloter': targetKloter,
+          'scanned_by': currentUserId,
           'scanned_at': nowIso,
           'created_at': nowIso,
         }).select().single();
@@ -1298,13 +1700,21 @@ class ApiService {
             'owner_name': inserted['owner_name'] ?? ownerName,
             'owner_phone': inserted['phone'] ?? phone,
             'phone': inserted['phone'] ?? phone,
-            'kloter': inserted['kloter'] ?? kloter,
+            'kloter': inserted['kloter'] ?? targetKloter,
+            'scanned_by': inserted['scanned_by'] ?? currentUserId,
             'scanned_at': inserted['scanned_at'] ?? nowIso,
             'created_at': inserted['created_at'] ?? nowIso,
           },
         };
       } catch (e) {
         debugPrint('⚠️ Error scanPassport Supabase: $e');
+        if (SupabaseConfig.isConfigured) {
+          return {
+            'status': 'error',
+            'code': 500,
+            'message': 'Gagal menyimpan scan paspor ke database: $e',
+          };
+        }
       }
     }
 
@@ -1357,18 +1767,22 @@ class ApiService {
   // =====================
   // GET SCANS (KOPER)
   // =====================
-  static Future<List<dynamic>> getScans({String? kloter}) async {
+  static Future<List<dynamic>> getScans({String? kloter, String? userId}) async {
     final targetKloter = kloter ?? await getCurrentUserKloter();
+    final currentUserId = userId ?? await getCurrentUserId();
     List<dynamic> list = [];
 
     // 1. Ambil dari Supabase tabel koper via Supabase Client
     final client = SupabaseService.client;
     if (client != null) {
       try {
-        final res = await client
-            .from('koper')
-            .select('*')
-            .order('created_at', ascending: false);
+        var query = client.from('koper').select('*');
+
+        if (currentUserId != null && currentUserId.isNotEmpty) {
+          query = query.eq('scanned_by', currentUserId);
+        }
+
+        final res = await query.order('created_at', ascending: false);
 
         list = res.map((row) {
           final map = Map<String, dynamic>.from(row as Map);
@@ -1376,6 +1790,7 @@ class ApiService {
           map['owner_name'] = map['nama_pemilik'];
           map['owner_phone'] = map['nomor_telepon'];
           map['scanned_at'] = map['created_at'];
+          map['scanned_by'] = map['scanned_by'];
           return map;
         }).toList();
       } catch (e) {
@@ -1384,9 +1799,13 @@ class ApiService {
     }
 
     // 2. Direct REST Fallback ke Supabase
-    if (list.isEmpty) {
+    if (list.isEmpty && SupabaseConfig.isConfigured) {
       try {
-        final restData = await SupabaseService.restGet('koper');
+        String path = 'koper';
+        if (currentUserId != null && currentUserId.isNotEmpty) {
+          path = 'koper?scanned_by=eq.$currentUserId';
+        }
+        final restData = await SupabaseService.restGet(path);
         if (restData.isNotEmpty) {
           list = restData.map((row) {
             final map = Map<String, dynamic>.from(row as Map);
@@ -1394,6 +1813,7 @@ class ApiService {
             map['owner_name'] = map['nama_pemilik'];
             map['owner_phone'] = map['nomor_telepon'];
             map['scanned_at'] = map['created_at'];
+            map['scanned_by'] = map['scanned_by'];
             return map;
           }).toList();
         }
@@ -1420,18 +1840,22 @@ class ApiService {
       } catch (_) {}
     }
 
-    // Filter berdasarkan kloter petugas yang sedang login
-    if (targetKloter != null && targetKloter.isNotEmpty && targetKloter != '-' && targetKloter != 'ALL') {
-      return list.where((scan) {
-        final itemKloter = (scan['kloter'] ?? '').toString();
-        return isSameKloter(targetKloter, itemKloter);
-      }).toList();
-    } else if (targetKloter == null || targetKloter.isEmpty || targetKloter == '-') {
-      // Petugas belum memiliki kloter, tidak menampilkan kloter lain
-      return [];
-    }
+    // Filter berdasarkan kloter & akun petugas yang sedang login
+    return list.where((scan) {
+      final itemKloter = (scan['kloter'] ?? '').toString();
+      final itemScannedBy = (scan['scanned_by'] ?? '').toString();
 
-    return list;
+      // Filter akun: hanya tampilkan data yang discan oleh akun yang sedang login
+      if (currentUserId != null && currentUserId.isNotEmpty && itemScannedBy.isNotEmpty) {
+        if (itemScannedBy != currentUserId) return false;
+      }
+
+      // Filter kloter petugas
+      if (targetKloter != null && targetKloter.isNotEmpty && targetKloter != '-' && targetKloter != 'ALL') {
+        return isSameKloter(targetKloter, itemKloter);
+      }
+      return true;
+    }).toList();
   }
 
   // =====================

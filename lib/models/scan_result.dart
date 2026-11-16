@@ -44,6 +44,8 @@ class ScanResult {
       scannedAt: rawTime != null
           ? DateTime.tryParse(rawTime.toString())
           : DateTime.now(),
+      scannedBy: data['scanned_by']?.toString() ?? data['tourleader']?.toString(),
+      message: data['message']?.toString(),
     );
   }
 
@@ -74,7 +76,7 @@ class ScanResult {
       scannedAt: rawTime != null
           ? DateTime.tryParse(rawTime.toString())
           : null,
-      scannedBy: data['tourleader']?.toString(),
+      scannedBy: data['scanned_by']?.toString() ?? data['tourleader']?.toString(),
       message: message,
     );
   }

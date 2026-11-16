@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:mobile_retali/helpers/permission_helper.dart';
 import 'package:mobile_retali/services/scan_service.dart';
@@ -20,6 +21,7 @@ class _ScanScreenState extends State<ScanScreen> {
   ScanMode _mode = ScanMode.koper;
 
   bool _scanLocked = false;
+  bool _isTorchOn = false;
   String? _statusMessage;
   Color _statusColor = Colors.transparent;
 
@@ -34,6 +36,8 @@ class _ScanScreenState extends State<ScanScreen> {
     _cameraController = MobileScannerController(
       detectionSpeed: DetectionSpeed.normal,
       autoStart: true,
+      facing: CameraFacing.back,
+      torchEnabled: false,
     );
 
     _playerOk = AudioPlayer()
@@ -145,12 +149,36 @@ class _ScanScreenState extends State<ScanScreen> {
       _showStatus("❌ GAGAL MEMPROSES QR: $e", Colors.red);
     }
 
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 1800));
     _unlockScan();
   }
 
   void _unlockScan() {
     _scanLocked = false;
+  }
+
+  Future<void> _toggleTorch() async {
+    try {
+      await _cameraController.toggleTorch();
+      setState(() => _isTorchOn = !_isTorchOn);
+    } catch (_) {}
+  }
+
+  Future<void> _pickFromGallery() async {
+    try {
+      final picker = ImagePicker();
+      final file = await picker.pickImage(source: ImageSource.gallery);
+      if (file != null) {
+        final capture = await _cameraController.analyzeImage(file.path);
+        if (capture != null && capture.barcodes.isNotEmpty) {
+          await _onDetect(capture);
+        } else {
+          _showStatus("⚠️ Tidak ada QR code valid yang terdeteksi dari file", Colors.orange);
+        }
+      }
+    } catch (e) {
+      _showStatus("❌ Gagal membaca file: $e", Colors.red);
+    }
   }
 
   Future<void> _handleScanKoper(String raw) async {
@@ -163,10 +191,12 @@ class _ScanScreenState extends State<ScanScreen> {
             : result.code;
         _showStatus("✅ SCAN KOPER BERHASIL\n$display", Colors.green);
       } else {
-        _showStatus("⚠️ KOPER SUDAH DISCAN\n${result.code}", Colors.orange);
+        final msg = result.message ?? 'Koper sudah pernah discan';
+        _showStatus("⚠️ $msg\n(${result.code})", Colors.orange);
       }
     } catch (e) {
-      _showStatus("❌ GAGAL SCAN KOPER: $e", Colors.red);
+      final msg = e.toString().replaceAll('Exception: ', '').trim();
+      _showStatus("❌ $msg", Colors.red);
     }
   }
 
@@ -180,10 +210,12 @@ class _ScanScreenState extends State<ScanScreen> {
             : result.code;
         _showStatus("✅ SCAN PASPOR BERHASIL\n$display", Colors.green);
       } else {
-        _showStatus("⚠️ PASPOR SUDAH DISCAN\n${result.code}", Colors.orange);
+        final msg = result.message ?? 'Paspor sudah pernah discan';
+        _showStatus("⚠️ $msg\n(${result.code})", Colors.orange);
       }
     } catch (e) {
-      _showStatus("❌ GAGAL SCAN PASPOR: $e", Colors.red);
+      final msg = e.toString().replaceAll('Exception: ', '').trim();
+      _showStatus("❌ $msg", Colors.red);
     }
   }
 
@@ -207,8 +239,50 @@ class _ScanScreenState extends State<ScanScreen> {
         }
 
         if (snapshot.data == false) {
-          return const Scaffold(
-            body: Center(child: Text("⚠️ Izin kamera ditolak")),
+          return Scaffold(
+            backgroundColor: const Color(0xFF1E293B),
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: const Text("Scan Kamera", style: TextStyle(color: Colors.white, fontSize: 16)),
+            ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.no_photography_rounded, size: 72, color: Colors.amber),
+                    const SizedBox(height: 16),
+                    const Text(
+                      "Izin Kamera Diperlukan",
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      "Aplikasi membutuhkan izin kamera untuk memindai kode QR secara real-time.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF842D62),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.camera_alt, color: Colors.white),
+                      label: const Text("Minta Izin Kamera", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      onPressed: () => setState(() {}),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         }
 
@@ -237,10 +311,10 @@ class _ScanScreenState extends State<ScanScreen> {
                             onPressed: () => Navigator.pop(context),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                             decoration: BoxDecoration(
                               color: Colors.black54,
                               borderRadius: BorderRadius.circular(12),
@@ -252,13 +326,34 @@ class _ScanScreenState extends State<ScanScreen> {
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 16,
+                                fontSize: 15,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
+                        CircleAvatar(
+                          backgroundColor: Colors.black45,
+                          child: IconButton(
+                            icon: Icon(
+                              _isTorchOn ? Icons.flash_on : Icons.flash_off,
+                              color: _isTorchOn ? Colors.amber : Colors.white,
+                            ),
+                            tooltip: "Senter Kamera",
+                            onPressed: _toggleTorch,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        CircleAvatar(
+                          backgroundColor: Colors.black45,
+                          child: IconButton(
+                            icon: const Icon(Icons.photo_library, color: Colors.white),
+                            tooltip: "Scan dari Galeri / File",
+                            onPressed: _pickFromGallery,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
                         CircleAvatar(
                           backgroundColor: Colors.black45,
                           child: IconButton(
@@ -299,18 +394,35 @@ class _ScanScreenState extends State<ScanScreen> {
 
               // Box scanner
               Center(
-                child: Container(
-                  width: 250,
-                  height: 250,
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: _mode == ScanMode.koper
-                          ? const Color(0xFF842D62)
-                          : Colors.blueAccent,
-                      width: 3,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 250,
+                      height: 250,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: _mode == ScanMode.koper
+                              ? const Color(0xFF842D62)
+                              : Colors.blueAccent,
+                          width: 3,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        "Arahkan kamera ke QR ${_mode == ScanMode.koper ? 'Koper' : 'Paspor'}",
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 

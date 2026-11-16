@@ -39,14 +39,15 @@ class HistoryScreenState extends State<HistoryScreen> {
 
   Future<List<dynamic>> _fetchScans() async {
     final kloter = await ApiService.getCurrentUserKloter();
+    final userId = await ApiService.getCurrentUserId();
     if (mounted && _currentKloter != kloter) {
       setState(() {
         _currentKloter = kloter;
       });
     }
     return _type == HistoryType.koper
-        ? ApiService.getScans(kloter: kloter)
-        : ApiService.getPassportScans(kloter: kloter);
+        ? ApiService.getScans(kloter: kloter, userId: userId)
+        : ApiService.getPassportScans(kloter: kloter, userId: userId);
   }
 
   String _formatDateTime(String v) {
