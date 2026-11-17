@@ -8,10 +8,17 @@ import 'supabase_service.dart';
 /// Service untuk memantau keberadaan (presence) akun petugas di aplikasi mobile.
 ///
 /// Aturan sesuai sistem dashboard:
-/// - Saat membuka aplikasi: `is_active = true` dan `updated_at` di-refresh (heartbeat setiap 45 detik).
-/// - Saat keluar/meminimalkan aplikasi: diberi toleransi 3 menit. Jika dalam 3 menit
-///   tidak kembali membuka aplikasi, `is_active` akan otomatis diubah menjadi `false`.
-/// - Saat logout: `is_active` seketika diubah menjadi `false`.
+/// - Saat membuka aplikasi: `updated_at` di-refresh (heartbeat setiap 45 detik).
+/// - Dashboard memeriksa status aktif online melalui selisih waktu `updated_at <= 3 menit`.
+/// - Saat keluar/meminimalkan aplikasi: heartbeat dihentikan. Setelah 3 menit tanpa
+///   heartbeat baru, dashboard otomatis menandai status petugas sebagai "Tidak Aktif".
+/// - Saat logout: `updated_at` dimundurkan ke 5 menit yang lalu agar dashboard langsung
+///   mendeteksi user offline seketika, TANPA mengubah kolom `is_active`.
+///
+/// PERHATIAN: Kolom `is_active` pada tabel `profiles` adalah status aktivasi akun
+/// dari admin (Aktif vs Suspended). Aplikasi mobile tidak boleh mengubah `is_active`
+/// menjadi `false` saat logout/minimize, karena akan menyebabkan akun tersuspend
+/// dan gagal login kembali ("Akun sedang tidak aktif").
 class PresenceService with WidgetsBindingObserver {
   static final PresenceService _instance = PresenceService._internal();
   factory PresenceService() => _instance;
@@ -24,7 +31,7 @@ class PresenceService with WidgetsBindingObserver {
   /// Interval pengiriman heartbeat saat user aktif di aplikasi (45 detik)
   static const Duration _heartbeatInterval = Duration(seconds: 45);
 
-  /// Batas toleransi keluar aplikasi sebelum status dinyatakan offline (3 menit)
+  /// Batas toleransi keluar aplikasi sebelum status dinyatakan offline di dashboard (3 menit)
   static const Duration _offlineDelay = Duration(minutes: 3);
 
   /// Inisialisasi lifecycle observer saat aplikasi pertama kali berjalan
@@ -58,13 +65,13 @@ class PresenceService with WidgetsBindingObserver {
     _inactiveTimer?.cancel();
     _inactiveTimer = null;
 
-    // Kirim sinyal online seketika
-    _updatePresence(isActive: true);
+    // Kirim sinyal online seketika (refresh updated_at)
+    _updatePresence(isOnline: true);
 
     // Jalankan heartbeat periodik setiap 45 detik
     _heartbeatTimer?.cancel();
     _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) {
-      _updatePresence(isActive: true);
+      _updatePresence(isOnline: true);
     });
 
     debugPrint('🟢 [PresenceService] Started online presence heartbeat');
@@ -79,8 +86,8 @@ class PresenceService with WidgetsBindingObserver {
     debugPrint('🟡 [PresenceService] App in background, 3-minute offline timer started...');
 
     _inactiveTimer = Timer(_offlineDelay, () {
-      debugPrint('🔴 [PresenceService] 3 minutes in background elapsed, marking is_active = false');
-      _updatePresence(isActive: false);
+      debugPrint('🔴 [PresenceService] 3 minutes in background elapsed, marking offline in dashboard');
+      _updatePresence(isOnline: false);
     });
   }
 
@@ -95,7 +102,7 @@ class PresenceService with WidgetsBindingObserver {
   /// Set user offline seketika (digunakan saat logout)
   static Future<void> setOfflineNow() async {
     stop();
-    await _updatePresence(isActive: false);
+    await _updatePresence(isOnline: false);
     debugPrint('🔴 [PresenceService] User explicitly set to offline');
   }
 
@@ -120,8 +127,12 @@ class PresenceService with WidgetsBindingObserver {
     }
   }
 
-  /// Mengirim update status is_active & updated_at ke tabel `profiles` di Supabase
-  static Future<void> _updatePresence({required bool isActive}) async {
+  /// Mengirim update status kehadiran via updated_at ke tabel `profiles` di Supabase.
+  ///
+  /// CATATAN PENTING: Hanya memperbarui `updated_at`, TIDAK PERNAH mengubah `is_active`!
+  /// Dashboard membaca (now - updated_at) <= 3 menit sebagai indikator Online (Aktif).
+  /// Saat offline, `updated_at` dimundurkan 5 menit lalu agar dashboard seketika membaca offline.
+  static Future<void> _updatePresence({required bool isOnline}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       String? userId = prefs.getString("user_id") ?? prefs.getString("id");
@@ -139,10 +150,14 @@ class PresenceService with WidgetsBindingObserver {
         return;
       }
 
-      final nowUtc = DateTime.now().toUtc().toIso8601String();
+      // Online: waktu sekarang (heartbeat baru).
+      // Offline: waktu 5 menit lalu sehingga dashboard langsung mendeteksi diffMinutes > 3.
+      final timestamp = isOnline
+          ? DateTime.now().toUtc()
+          : DateTime.now().toUtc().subtract(const Duration(minutes: 5));
+
       final updateData = {
-        'is_active': isActive,
-        'updated_at': nowUtc,
+        'updated_at': timestamp.toIso8601String(),
       };
 
       // 1. Coba melalui Supabase Client
@@ -151,11 +166,11 @@ class PresenceService with WidgetsBindingObserver {
         try {
           if (hasId) {
             await client.from('profiles').update(updateData).eq('id', userId);
-            debugPrint('✅ [PresenceService] Updated profiles ($userId) via client: is_active=$isActive');
+            debugPrint('✅ [PresenceService] Updated profiles ($userId) via client: isOnline=$isOnline');
             return;
           } else if (hasEmail) {
             await client.from('profiles').update(updateData).eq('email', email);
-            debugPrint('✅ [PresenceService] Updated profiles ($email) via client: is_active=$isActive');
+            debugPrint('✅ [PresenceService] Updated profiles ($email) via client: isOnline=$isOnline');
             return;
           }
         } catch (e) {
@@ -179,7 +194,7 @@ class PresenceService with WidgetsBindingObserver {
           headers: headers,
           body: jsonEncode(updateData),
         );
-        debugPrint('✅ [PresenceService] Updated profiles via REST ($queryParam) [status ${res.statusCode}]: is_active=$isActive');
+        debugPrint('✅ [PresenceService] Updated profiles via REST ($queryParam) [status ${res.statusCode}]: isOnline=$isOnline');
       } catch (e) {
         debugPrint('⚠️ [PresenceService] REST update failed: $e');
       }
