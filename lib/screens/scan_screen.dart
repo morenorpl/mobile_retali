@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:image_picker/image_picker.dart';
 
 import 'package:mobile_retali/helpers/permission_helper.dart';
 import 'package:mobile_retali/services/scan_service.dart';
@@ -162,23 +161,6 @@ class _ScanScreenState extends State<ScanScreen> {
       await _cameraController.toggleTorch();
       setState(() => _isTorchOn = !_isTorchOn);
     } catch (_) {}
-  }
-
-  Future<void> _pickFromGallery() async {
-    try {
-      final picker = ImagePicker();
-      final file = await picker.pickImage(source: ImageSource.gallery);
-      if (file != null) {
-        final capture = await _cameraController.analyzeImage(file.path);
-        if (capture != null && capture.barcodes.isNotEmpty) {
-          await _onDetect(capture);
-        } else {
-          _showStatus("⚠️ Tidak ada QR code valid yang terdeteksi dari file", Colors.orange);
-        }
-      }
-    } catch (e) {
-      _showStatus("❌ Gagal membaca file: $e", Colors.red);
-    }
   }
 
   Future<void> _handleScanKoper(String raw) async {
@@ -342,15 +324,6 @@ class _ScanScreenState extends State<ScanScreen> {
                             ),
                             tooltip: "Senter Kamera",
                             onPressed: _toggleTorch,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        CircleAvatar(
-                          backgroundColor: Colors.black45,
-                          child: IconButton(
-                            icon: const Icon(Icons.photo_library, color: Colors.white),
-                            tooltip: "Scan dari Galeri / File",
-                            onPressed: _pickFromGallery,
                           ),
                         ),
                         const SizedBox(width: 6),
