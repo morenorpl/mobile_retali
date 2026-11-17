@@ -31,41 +31,23 @@ class ProfileScreen extends StatelessWidget {
     };
   }
 
-  Future<void> _logout(BuildContext context) async {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text(
-          'Konfirmasi Logout',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF842D62),
-          ),
-        ),
-        content: const Text('Apakah Anda yakin ingin logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await ApiService.logout();
+  static bool _isLoggingOut = false;
 
-              if (context.mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Logout', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+  Future<void> _logout(BuildContext context) async {
+    if (_isLoggingOut) return;
+    _isLoggingOut = true;
+    try {
+      await ApiService.logout();
+
+      if (context.mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    } finally {
+      _isLoggingOut = false;
+    }
   }
 
   Widget _buildField(String label, IconData icon, String value) {
