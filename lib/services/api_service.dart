@@ -1164,11 +1164,15 @@ class ApiService {
         String namaPemilik = "-";
         String nomorTelepon = "-";
         String? qrKloter;
+        int? noUrutan;
 
         bool parsed = false;
         try {
           final j = jsonDecode(qrRaw);
           if (j is Map) {
+            if (j.containsKey('no_urutan') || j.containsKey('nourutan') || j.containsKey('urutan')) {
+              noUrutan = int.tryParse(j['no_urutan']?.toString() ?? j['nourutan']?.toString() ?? j['urutan']?.toString() ?? '');
+            }
             kodeKoper = (j['kode_koper'] ??
                     j['koper_code'] ??
                     j['code'] ??
@@ -1364,14 +1368,18 @@ class ApiService {
         }
 
         final nowIso = DateTime.now().toUtc().toIso8601String();
-        final inserted = await client.from('koper').insert({
+        final Map<String, dynamic> insertPayload = {
           'kode_koper': kodeKoper,
           'nama_pemilik': namaPemilik,
           'nomor_telepon': nomorTelepon,
           'kloter': targetKloter,
           'scanned_by': currentUserId,
           'created_at': nowIso,
-        }).select().single();
+        };
+        if (noUrutan != null) {
+          insertPayload['no_urutan'] = noUrutan;
+        }
+        final inserted = await client.from('koper').insert(insertPayload).select().single();
 
         return {
           'status': 'success',
@@ -1463,11 +1471,15 @@ class ApiService {
         String ownerName = "-";
         String phone = "-";
         String? qrKloter;
+        int? noUrutan;
 
         bool parsed = false;
         try {
           final j = jsonDecode(qrRaw);
           if (j is Map) {
+            if (j.containsKey('no_urutan') || j.containsKey('nourutan') || j.containsKey('urutan')) {
+              noUrutan = int.tryParse(j['no_urutan']?.toString() ?? j['nourutan']?.toString() ?? j['urutan']?.toString() ?? '');
+            }
             passportNumber = (j['passport_number'] ??
                     j['passport'] ??
                     j['passportNumber'] ??
@@ -1681,7 +1693,7 @@ class ApiService {
         }
 
         final nowIso = DateTime.now().toUtc().toIso8601String();
-        final inserted = await client.from('passport_scans').insert({
+        final Map<String, dynamic> insertPayload = {
           'passport_number': passportNumber,
           'owner_name': ownerName,
           'phone': phone,
@@ -1689,7 +1701,11 @@ class ApiService {
           'scanned_by': currentUserId,
           'scanned_at': nowIso,
           'created_at': nowIso,
-        }).select().single();
+        };
+        if (noUrutan != null) {
+          insertPayload['no_urutan'] = noUrutan;
+        }
+        final inserted = await client.from('passport_scans').insert(insertPayload).select().single();
 
         return {
           'status': 'success',
