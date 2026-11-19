@@ -494,7 +494,7 @@ class _DaysTabBarState extends State<_DaysTabBar> {
         final selectedIndex = _tabController!.index;
 
         return Container(
-          height: 78,
+          height: 88,
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
@@ -553,7 +553,7 @@ class _DaysTabBarState extends State<_DaysTabBar> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           constraints: const BoxConstraints(minWidth: 130),
           decoration: BoxDecoration(
             gradient: isSelected
@@ -586,82 +586,86 @@ class _DaysTabBarState extends State<_DaysTabBar> {
                 ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 2.5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Colors.white.withValues(alpha: 0.22)
-                          : const Color(0xFF842D62).withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      'Day ${index + 1}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2.5,
+                      ),
+                      decoration: BoxDecoration(
                         color: isSelected
-                            ? Colors.white
-                            : const Color(0xFF842D62),
-                        letterSpacing: 0.2,
+                            ? Colors.white.withValues(alpha: 0.22)
+                            : const Color(0xFF842D62).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'Day ${index + 1}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected
+                              ? Colors.white
+                              : const Color(0xFF842D62),
+                          letterSpacing: 0.2,
+                        ),
                       ),
                     ),
-                  ),
-                  if (shortDate.isNotEmpty) ...[
-                    const SizedBox(width: 6),
-                    Text(
-                      shortDate,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: isSelected
-                            ? Colors.white.withValues(alpha: 0.85)
-                            : const Color(0xFF6B7280),
+                    if (shortDate.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        shortDate,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: isSelected
+                              ? Colors.white.withValues(alpha: 0.85)
+                              : const Color(0xFF6B7280),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 5),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.location_on_rounded,
+                      size: 13,
+                      color: isSelected
+                          ? const Color(0xFFFDE047)
+                          : const Color(0xFF842D62),
+                    ),
+                    const SizedBox(width: 4),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 135),
+                      child: Text(
+                        cityName,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: isSelected
+                            ? Colors.white
+                            : const Color(0xFF1F2937),
+                          letterSpacing: 0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.location_on_rounded,
-                    size: 13,
-                    color: isSelected
-                        ? const Color(0xFFFDE047)
-                        : const Color(0xFF842D62),
-                  ),
-                  const SizedBox(width: 4),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 135),
-                    child: Text(
-                      cityName,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: isSelected
-                            ? Colors.white
-                            : const Color(0xFF1F2937),
-                        letterSpacing: 0.2,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
