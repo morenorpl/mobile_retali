@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/persiapan_materi.dart';
 import '../services/persiapan_service.dart';
 
@@ -128,6 +129,39 @@ class _PersiapanMateriScreenState extends State<PersiapanMateriScreen> {
           ),
         ),
         actions: [
+          TextButton.icon(
+            onPressed: () async {
+              final textToCopy = [
+                item.title,
+                if (item.subTitle != null && item.subTitle!.trim().isNotEmpty)
+                  item.subTitle!.trim(),
+                if (cleanDesc.isNotEmpty) cleanDesc,
+                if (cleanContent.isNotEmpty) cleanContent,
+              ].join('\n\n');
+
+              await Clipboard.setData(ClipboardData(text: textToCopy));
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Materi berhasil disalin ke clipboard'),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+            icon: const Icon(Icons.copy, size: 18),
+            label: const Text(
+              "Salin",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF842D62),
+            ),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             style: TextButton.styleFrom(

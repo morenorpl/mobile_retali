@@ -7,18 +7,12 @@ import 'supabase_service.dart';
 
 /// Service untuk memantau keberadaan (presence) akun petugas di aplikasi mobile.
 ///
-/// Aturan sesuai sistem dashboard:
-/// - Saat membuka aplikasi: `updated_at` di-refresh (heartbeat setiap 45 detik).
-/// - Dashboard memeriksa status aktif online melalui selisih waktu `updated_at <= 3 menit`.
-/// - Saat keluar/meminimalkan aplikasi: heartbeat dihentikan. Setelah 3 menit tanpa
-///   heartbeat baru, dashboard otomatis menandai status petugas sebagai "Tidak Aktif".
-/// - Saat logout: `updated_at` dimundurkan ke 5 menit yang lalu agar dashboard langsung
-///   mendeteksi user offline seketika, TANPA mengubah kolom `is_active`.
-///
-/// PERHATIAN: Kolom `is_active` pada tabel `profiles` adalah status aktivasi akun
-/// dari admin (Aktif vs Suspended). Aplikasi mobile tidak boleh mengubah `is_active`
-/// menjadi `false` saat logout/minimize, karena akan menyebabkan akun tersuspend
-/// dan gagal login kembali ("Akun sedang tidak aktif").
+/// Aturan:
+/// - Saat membuka aplikasi / login: `is_active = true` dan `updated_at` di-refresh (heartbeat setiap 45 detik).
+/// - Dashboard memeriksa status aktif melalui kolom `is_active` dan waktu `updated_at`.
+/// - Saat keluar/meminimalkan aplikasi: jika dalam 3 menit tidak kembali, `is_active` otomatis diubah menjadi `false`.
+/// - Saat logout: `is_active` seketika diubah menjadi `false` dan `updated_at` dimundurkan 5 menit lalu.
+/// - Saat login: aplikasi otomatis memastikan status `is_active = true` sehingga tidak ada kendala "Akun sedang tidak aktif".
 class PresenceService with WidgetsBindingObserver {
   static final PresenceService _instance = PresenceService._internal();
   factory PresenceService() => _instance;
@@ -157,6 +151,7 @@ class PresenceService with WidgetsBindingObserver {
           : DateTime.now().toUtc().subtract(const Duration(minutes: 5));
 
       final updateData = {
+        'is_active': isOnline,
         'updated_at': timestamp.toIso8601String(),
       };
 
@@ -165,12 +160,12 @@ class PresenceService with WidgetsBindingObserver {
       if (client != null) {
         try {
           if (hasId) {
-            await client.from('profiles').update(updateData).eq('id', userId);
-            debugPrint('✅ [PresenceService] Updated profiles ($userId) via client: isOnline=$isOnline');
+            await client.from('profiles').update(updateData).eq('id', userId).timeout(const Duration(seconds: 3));
+            debugPrint('✅ [PresenceService] Updated profiles ($userId) via client: is_active=$isOnline');
             return;
           } else if (hasEmail) {
-            await client.from('profiles').update(updateData).eq('email', email);
-            debugPrint('✅ [PresenceService] Updated profiles ($email) via client: isOnline=$isOnline');
+            await client.from('profiles').update(updateData).eq('email', email).timeout(const Duration(seconds: 3));
+            debugPrint('✅ [PresenceService] Updated profiles ($email) via client: is_active=$isOnline');
             return;
           }
         } catch (e) {
@@ -193,8 +188,8 @@ class PresenceService with WidgetsBindingObserver {
           uri,
           headers: headers,
           body: jsonEncode(updateData),
-        );
-        debugPrint('✅ [PresenceService] Updated profiles via REST ($queryParam) [status ${res.statusCode}]: isOnline=$isOnline');
+        ).timeout(const Duration(seconds: 3));
+        debugPrint('✅ [PresenceService] Updated profiles via REST ($queryParam) [status ${res.statusCode}]: is_active=$isOnline');
       } catch (e) {
         debugPrint('⚠️ [PresenceService] REST update failed: $e');
       }

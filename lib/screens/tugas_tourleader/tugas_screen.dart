@@ -378,7 +378,7 @@ class _TaskCard extends StatelessWidget {
               if (onKerjakan != null)
                 ElevatedButton.icon(
                   onPressed: onKerjakan,
-                  icon: const Icon(Icons.play_arrow_rounded),
+                  icon: const Icon(Icons.edit_rounded),
                   label: const Text(
                     'Kerjakan Tugas',
                     style: TextStyle(

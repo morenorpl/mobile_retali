@@ -74,18 +74,35 @@ class ApiService {
   }
 
   static Future<void> logout() async {
+    // 1. Langsung hentikan semua timer/heartbeat background presence
+    PresenceService.stop();
+
+    // 2. Set is_active = false dan updated_at di Supabase SELAGI SESI MASIH AKTIF
     try {
-      await PresenceService.setOfflineNow();
+      await PresenceService.setOfflineNow().timeout(
+        const Duration(milliseconds: 2000),
+        onTimeout: () {
+          debugPrint('⚠️ [ApiService] setOfflineNow timed out');
+        },
+      );
     } catch (_) {}
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    // 3. Setelah status is_active = false terkirim, barulah signOut dari Supabase
     try {
       final client = SupabaseService.client;
       if (client != null) {
-        await client.auth.signOut();
+        await client.auth.signOut().timeout(
+          const Duration(milliseconds: 1500),
+          onTimeout: () {
+            debugPrint('⚠️ [ApiService] Supabase signOut timed out');
+          },
+        );
       }
     } catch (_) {}
+
+    // 4. Bersihkan seluruh session & data lokal
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
   }
 
   static Future<String?> getTourLeaderToken() => _getToken();
@@ -294,7 +311,83 @@ class ApiService {
         );
       }
 
-      final data = res.data;
+      var data = res.data;
+
+      // 🔥 AUTO-AKTIVASI SAAT LOGIN JIKA BACKEND MENOLAK KARENA "TIDAK AKTIF"
+      if (res.statusCode != 200 && data is Map<String, dynamic>) {
+        final errText = ((data['detail'] ?? data['message']) ?? '').toString().toLowerCase();
+        if (errText.contains('tidak aktif')) {
+          debugPrint('ℹ️ [ApiService] Akun berstatus tidak aktif saat login, mengaktifkan is_active = true di database...');
+
+          // 1. Coba aktivasi melalui Supabase Auth & update tabel profiles
+          final supabaseClient = SupabaseService.client;
+          bool activated = false;
+          if (supabaseClient != null) {
+            try {
+              final authRes = await supabaseClient.auth.signInWithPassword(
+                email: email,
+                password: password,
+              );
+              if (authRes.user != null) {
+                await supabaseClient.from('profiles').update({
+                  'is_active': true,
+                  'updated_at': DateTime.now().toUtc().toIso8601String(),
+                }).eq('id', authRes.user!.id).timeout(const Duration(seconds: 3));
+                activated = true;
+                debugPrint('✅ [ApiService] Berhasil aktivasi is_active = true via Supabase Auth');
+              }
+            } catch (e) {
+              debugPrint('⚠️ [ApiService] Gagal aktivasi via Supabase Auth: $e');
+            }
+          }
+
+          // 2. Fallback via REST API jika Supabase Auth belum berhasil
+          if (!activated) {
+            try {
+              final uri = Uri.parse('${SupabaseConfig.supabaseUrl}/rest/v1/profiles?email=eq.$email');
+              final patchRes = await http.patch(
+                uri,
+                headers: SupabaseConfig.restHeaders,
+                body: jsonEncode({
+                  'is_active': true,
+                  'updated_at': DateTime.now().toUtc().toIso8601String(),
+                }),
+              ).timeout(const Duration(seconds: 3));
+              if (patchRes.statusCode >= 200 && patchRes.statusCode < 300) {
+                activated = true;
+                debugPrint('✅ [ApiService] Berhasil aktivasi is_active = true via REST');
+              }
+            } catch (e) {
+              debugPrint('⚠️ [ApiService] Gagal aktivasi via REST: $e');
+            }
+          }
+
+          // 3. Setelah is_active diubah menjadi true di database, ulangi request login ke backend!
+          if (activated) {
+            try {
+              Response retryRes;
+              try {
+                retryRes = await dio.post(
+                  '/auth/login',
+                  data: {'email': email, 'password': password},
+                );
+              } catch (_) {
+                retryRes = await dio.post(
+                  '/login',
+                  data: {'email': email, 'password': password},
+                );
+              }
+
+              if (retryRes.statusCode == 200 && retryRes.data is Map<String, dynamic>) {
+                res = retryRes;
+                data = retryRes.data;
+              }
+            } catch (e) {
+              debugPrint('⚠️ [ApiService] Retry login error: $e');
+            }
+          }
+        }
+      }
 
       if (res.statusCode == 200 && data is Map<String, dynamic>) {
         final token = (data['access_token'] ?? data['token'] ?? data['session_token'])?.toString();
@@ -350,6 +443,21 @@ class ApiService {
                   userKloter = profile['kloter'].toString();
                 }
                 userKloterId = profile['kloter_id']?.toString();
+              }
+            } catch (_) {}
+
+            // 🔥 Pastikan status is_active = true di Supabase saat login berhasil
+            try {
+              if (userId.isNotEmpty && _isValidUuid(userId)) {
+                await supabaseClient.from('profiles').update({
+                  'is_active': true,
+                  'updated_at': DateTime.now().toUtc().toIso8601String(),
+                }).eq('id', userId);
+              } else if (email.isNotEmpty) {
+                await supabaseClient.from('profiles').update({
+                  'is_active': true,
+                  'updated_at': DateTime.now().toUtc().toIso8601String(),
+                }).eq('email', email);
               }
             } catch (_) {}
           }
@@ -504,6 +612,21 @@ class ApiService {
               'kloter_id': userKloterId,
               'kloter_tanggal': userKloterTanggal.isNotEmpty ? userKloterTanggal : '-',
             });
+
+            // 🔥 Pastikan status is_active = true di Supabase saat login berhasil
+            try {
+              if (_isValidUuid(profileId)) {
+                await supabaseClient.from('profiles').update({
+                  'is_active': true,
+                  'updated_at': DateTime.now().toUtc().toIso8601String(),
+                }).eq('id', profileId);
+              } else if (email.isNotEmpty) {
+                await supabaseClient.from('profiles').update({
+                  'is_active': true,
+                  'updated_at': DateTime.now().toUtc().toIso8601String(),
+                }).eq('email', email);
+              }
+            } catch (_) {}
 
             return {'success': true, 'message': 'Login Berhasil'};
           }

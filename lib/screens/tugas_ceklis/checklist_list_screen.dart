@@ -435,7 +435,7 @@ class _ChecklistCard extends StatelessWidget {
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.play_arrow_rounded, size: 20),
+                        Icon(Icons.edit_rounded, size: 20),
                         SizedBox(width: 8),
                         Text(
                           'Kerjakan Checklist',

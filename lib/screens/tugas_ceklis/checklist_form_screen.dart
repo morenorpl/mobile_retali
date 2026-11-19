@@ -493,8 +493,10 @@ class _QuestionCard extends StatelessWidget {
             runSpacing: 8,
             children: [
               _option('Sudah', CkAns.sudah),
-              _option('Tidak terpenuhi', CkAns.tidak),
-              _option('Dikerjakan oleh rekan', CkAns.rekan),
+              if (!enabled && value == CkAns.tidak)
+                _option('Tidak terpenuhi', CkAns.tidak),
+              if (!enabled && value == CkAns.rekan)
+                _option('Dikerjakan oleh rekan', CkAns.rekan),
             ],
           ),
 
@@ -565,7 +567,7 @@ class _QuestionCard extends StatelessWidget {
 
     return InkWell(
       borderRadius: BorderRadius.circular(20),
-      onTap: enabled ? () => onChanged(v) : null,
+      onTap: enabled ? () => onChanged(selected ? null : v) : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(

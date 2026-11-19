@@ -3,9 +3,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mobile_retali/services/api_service.dart';
 import 'package:mobile_retali/screens/login_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   final bool isTab;
   const ProfileScreen({super.key, this.isTab = false});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _isLoggingOut = false;
 
   String _kloterLabel(String? raw) {
     switch (raw) {
@@ -31,22 +38,28 @@ class ProfileScreen extends StatelessWidget {
     };
   }
 
-  static bool _isLoggingOut = false;
-
-  Future<void> _logout(BuildContext context) async {
+  Future<void> _logout() async {
     if (_isLoggingOut) return;
-    _isLoggingOut = true;
+    setState(() => _isLoggingOut = true);
     try {
       await ApiService.logout();
 
-      if (context.mounted) {
+      if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const LoginScreen()),
           (route) => false,
         );
       }
-    } finally {
-      _isLoggingOut = false;
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoggingOut = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal logout: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
@@ -144,7 +157,7 @@ class ProfileScreen extends StatelessWidget {
 
         return Scaffold(
           appBar: AppBar(
-            automaticallyImplyLeading: !isTab,
+            automaticallyImplyLeading: !widget.isTab,
             title: const Text(
               "Profil Saya",
               style: TextStyle(
@@ -327,9 +340,10 @@ class ProfileScreen extends StatelessWidget {
                       ],
                     ),
                     child: ElevatedButton(
-                      onPressed: () => _logout(context),
+                      onPressed: _isLoggingOut ? null : _logout,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
+                        disabledBackgroundColor: Colors.red.withOpacity(0.6),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                           vertical: 16,
@@ -340,20 +354,43 @@ class ProfileScreen extends StatelessWidget {
                         ),
                         elevation: 0,
                       ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.logout_rounded, size: 20),
-                          SizedBox(width: 8),
-                          Text(
-                            "Keluar dari Aplikasi",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                      child: _isLoggingOut
+                          ? const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                ),
+                                SizedBox(width: 12),
+                                Text(
+                                  "Sedang keluar...",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.logout_rounded, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  "Keluar dari Aplikasi",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
 

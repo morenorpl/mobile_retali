@@ -579,9 +579,9 @@ class _ChecklistDetailScreenState extends State<ChecklistDetailScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Icons.play_arrow_rounded,
+                Icons.edit_rounded,
                 color: Colors.white,
-                size: 24,
+                size: 22,
               ),
               SizedBox(width: 8),
               Text(

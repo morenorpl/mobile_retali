@@ -297,76 +297,7 @@ class _ItineraryDetailPageState extends State<ItineraryDetailPage> {
         ),
 
         // Days Tabs
-        Container(
-          color: Colors.white,
-          child: Column(
-            children: [
-              Container(
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TabBar(
-                  isScrollable: true,
-                  labelPadding: const EdgeInsets.symmetric(horizontal: 12),
-                  indicator: BoxDecoration(
-                    color: AppTheme.brand,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.black87,
-                  labelStyle: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                  unselectedLabelStyle: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 14,
-                  ),
-                  tabs: days.isEmpty
-                      ? const [Tab(text: 'Day 1')]
-                      : days.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final day = entry.value;
-                          return Tab(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text('Day ${index + 1}'),
-                                if (day.city != null &&
-                                    day.city!.isNotEmpty)
-                                  Container(
-                                    margin: const EdgeInsets.only(left: 6),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          Colors.white.withOpacity(0.2),
-                                      borderRadius:
-                                          BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      day.city!,
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                ),
-              ),
-              Container(
-                height: 1,
-                color: Colors.grey[200],
-              ),
-            ],
-          ),
-        ),
+        _DaysTabBar(days: days),
 
         // Tab Content
         Expanded(
@@ -484,6 +415,257 @@ class _ItineraryDetailPageState extends State<ItineraryDetailPage> {
     } catch (_) {
       return '$startDate - $endDate';
     }
+  }
+}
+
+// ===================== DAYS TAB BAR =====================
+
+class _DaysTabBar extends StatefulWidget {
+  final List<ItineraryDay> days;
+
+  const _DaysTabBar({required this.days});
+
+  @override
+  State<_DaysTabBar> createState() => _DaysTabBarState();
+}
+
+class _DaysTabBarState extends State<_DaysTabBar> {
+  final ScrollController _scrollController = ScrollController();
+  TabController? _tabController;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final controller = DefaultTabController.of(context);
+    if (_tabController != controller) {
+      _tabController?.removeListener(_handleTabChange);
+      _tabController = controller;
+      _tabController?.addListener(_handleTabChange);
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController?.removeListener(_handleTabChange);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _handleTabChange() {
+    if (_tabController != null && !_tabController!.indexIsChanging) {
+      _scrollToIndex(_tabController!.index);
+    }
+  }
+
+  void _scrollToIndex(int index) {
+    if (!_scrollController.hasClients) return;
+    const itemWidth = 145.0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final targetOffset =
+        (index * itemWidth) - (screenWidth / 2) + (itemWidth / 2);
+    _scrollController.animateTo(
+      targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  String _formatShortDate(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '';
+    try {
+      final d = DateTime.parse(raw).toLocal();
+      const months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+        'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+      ];
+      return '${d.day} ${months[d.month - 1]}';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_tabController == null) return const SizedBox.shrink();
+
+    return AnimatedBuilder(
+      animation: _tabController!,
+      builder: (context, _) {
+        final selectedIndex = _tabController!.index;
+
+        return Container(
+          height: 78,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: ListView.separated(
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            itemCount: widget.days.isEmpty ? 1 : widget.days.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              final isSelected = selectedIndex == index;
+              final day = widget.days.isNotEmpty ? widget.days[index] : null;
+
+              return _buildDayCard(
+                index: index,
+                day: day,
+                isSelected: isSelected,
+                onTap: () {
+                  _tabController?.animateTo(index);
+                  _scrollToIndex(index);
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDayCard({
+    required int index,
+    required ItineraryDay? day,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final cityName = (day?.city != null && day!.city!.trim().isNotEmpty)
+        ? day.city!.trim()
+        : (day != null && day.items.isNotEmpty
+            ? '${day.items.length} Agenda'
+            : 'Agenda');
+    final shortDate = _formatShortDate(day?.date);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        splashColor: const Color(0xFF842D62).withValues(alpha: 0.15),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          constraints: const BoxConstraints(minWidth: 130),
+          decoration: BoxDecoration(
+            gradient: isSelected
+                ? const LinearGradient(
+                    colors: [Color(0xFF842D62), Color(0xFF5C1C3B)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: isSelected ? null : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected
+                  ? Colors.transparent
+                  : const Color(0xFFE5E7EB),
+              width: 1.2,
+            ),
+            boxShadow: [
+              if (isSelected)
+                BoxShadow(
+                  color: const Color(0xFF842D62).withValues(alpha: 0.35),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              else
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? Colors.white.withValues(alpha: 0.22)
+                          : const Color(0xFF842D62).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Day ${index + 1}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected
+                            ? Colors.white
+                            : const Color(0xFF842D62),
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                  if (shortDate.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      shortDate,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: isSelected
+                            ? Colors.white.withValues(alpha: 0.85)
+                            : const Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.location_on_rounded,
+                    size: 13,
+                    color: isSelected
+                        ? const Color(0xFFFDE047)
+                        : const Color(0xFF842D62),
+                  ),
+                  const SizedBox(width: 4),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 135),
+                    child: Text(
+                      cityName,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected
+                            ? Colors.white
+                            : const Color(0xFF1F2937),
+                        letterSpacing: 0.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
