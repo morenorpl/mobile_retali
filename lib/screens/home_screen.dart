@@ -65,7 +65,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    PresenceService.stop();
     NotificationService.removeListener(_loadUnread);
     _scrollController.dispose();
     super.dispose();

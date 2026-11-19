@@ -22,8 +22,8 @@ class PresenceService with WidgetsBindingObserver {
   static Timer? _inactiveTimer;
   static bool _isInitialized = false;
 
-  /// Interval pengiriman heartbeat saat user aktif di aplikasi (25 detik)
-  static const Duration _heartbeatInterval = Duration(seconds: 25);
+  /// Interval pengiriman heartbeat saat user aktif di aplikasi (20 detik)
+  static const Duration _heartbeatInterval = Duration(seconds: 20);
 
   /// Batas toleransi keluar aplikasi sebelum status dinyatakan offline (1 menit)
   static const Duration _offlineDelay = Duration(minutes: 1);
@@ -62,7 +62,7 @@ class PresenceService with WidgetsBindingObserver {
     // Kirim sinyal online seketika (refresh updated_at)
     _updatePresence(isOnline: true);
 
-    // Jalankan heartbeat periodik setiap 45 detik
+    // Jalankan heartbeat periodik setiap 20 detik
     _heartbeatTimer?.cancel();
     _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) {
       _updatePresence(isOnline: true);
@@ -71,14 +71,28 @@ class PresenceService with WidgetsBindingObserver {
     debugPrint('🟢 [PresenceService] Started online presence heartbeat');
   }
 
-  /// Saat aplikasi diminimalkan/background, hentikan heartbeat dan hitung mundur 1 menit
+  /// Saat aplikasi diminimalkan/berpindah ke aplikasi lain (contoh: Google Maps):
+  /// - Refresh heartbeat seketika agar `updated_at` tercatat tepat saat user beralih aplikasi.
+  /// - Status tetap aktif selama 1 menit (sesuai batas toleransi).
+  /// - Jalankan hitung mundur 1 menit; jika dalam 1 menit user tidak kembali ke aplikasi Retali,
+  ///   status otomatis diubah menjadi tidak aktif (offline).
   static void pause() {
+    // Jika timer 1 menit sudah berjalan (misal transisi lifecycle inactive -> paused / hidden),
+    // jangan reset timer agar hitungan mundur 1 menit tidak tertunda/diulang dari 0.
+    if (_inactiveTimer != null && _inactiveTimer!.isActive) {
+      return;
+    }
+
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
 
-    _inactiveTimer?.cancel();
-    debugPrint('🟡 [PresenceService] App in background, 1-minute offline timer started...');
+    // Refresh status online & updated_at tepat saat user beralih aplikasi (contohnya ke Google Maps),
+    // sehingga countdown toleransi 1 menit dimulai tepat dari detik user meninggalkan aplikasi.
+    _updatePresence(isOnline: true);
 
+    debugPrint('🟡 [PresenceService] App switched to background / other app. Status remains ACTIVE for 1 minute...');
+
+    _inactiveTimer?.cancel();
     _inactiveTimer = Timer(_offlineDelay, () {
       debugPrint('🔴 [PresenceService] 1 minute in background elapsed, marking offline (is_active = false)');
       _updatePresence(isOnline: false);
