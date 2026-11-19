@@ -8,9 +8,9 @@ import 'supabase_service.dart';
 /// Service untuk memantau keberadaan (presence) akun petugas di aplikasi mobile.
 ///
 /// Aturan:
-/// - Saat membuka aplikasi / login: `is_active = true` dan `updated_at` di-refresh (heartbeat setiap 45 detik).
-/// - Dashboard memeriksa status aktif melalui kolom `is_active` dan waktu `updated_at`.
-/// - Saat keluar/meminimalkan aplikasi: jika dalam 3 menit tidak kembali, `is_active` otomatis diubah menjadi `false`.
+/// - Saat membuka aplikasi / login: `is_active = true` dan `updated_at` di-refresh (heartbeat setiap 25 detik).
+/// - Dashboard memeriksa status aktif melalui kolom `is_active` dan waktu `updated_at` (dalam batas toleransi 1 menit).
+/// - Saat keluar/meminimalkan aplikasi: jika dalam 1 menit tidak kembali membuka aplikasi, `is_active` otomatis diubah menjadi `false`.
 /// - Saat logout: `is_active` seketika diubah menjadi `false` dan `updated_at` dimundurkan 5 menit lalu.
 /// - Saat login: aplikasi otomatis memastikan status `is_active = true` sehingga tidak ada kendala "Akun sedang tidak aktif".
 class PresenceService with WidgetsBindingObserver {
@@ -22,11 +22,11 @@ class PresenceService with WidgetsBindingObserver {
   static Timer? _inactiveTimer;
   static bool _isInitialized = false;
 
-  /// Interval pengiriman heartbeat saat user aktif di aplikasi (45 detik)
-  static const Duration _heartbeatInterval = Duration(seconds: 45);
+  /// Interval pengiriman heartbeat saat user aktif di aplikasi (25 detik)
+  static const Duration _heartbeatInterval = Duration(seconds: 25);
 
-  /// Batas toleransi keluar aplikasi sebelum status dinyatakan offline di dashboard (3 menit)
-  static const Duration _offlineDelay = Duration(minutes: 3);
+  /// Batas toleransi keluar aplikasi sebelum status dinyatakan offline (1 menit)
+  static const Duration _offlineDelay = Duration(minutes: 1);
 
   /// Inisialisasi lifecycle observer saat aplikasi pertama kali berjalan
   static void init() {
@@ -71,16 +71,16 @@ class PresenceService with WidgetsBindingObserver {
     debugPrint('🟢 [PresenceService] Started online presence heartbeat');
   }
 
-  /// Saat aplikasi diminimalkan/background, hentikan heartbeat dan hitung mundur 3 menit
+  /// Saat aplikasi diminimalkan/background, hentikan heartbeat dan hitung mundur 1 menit
   static void pause() {
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
 
     _inactiveTimer?.cancel();
-    debugPrint('🟡 [PresenceService] App in background, 3-minute offline timer started...');
+    debugPrint('🟡 [PresenceService] App in background, 1-minute offline timer started...');
 
     _inactiveTimer = Timer(_offlineDelay, () {
-      debugPrint('🔴 [PresenceService] 3 minutes in background elapsed, marking offline in dashboard');
+      debugPrint('🔴 [PresenceService] 1 minute in background elapsed, marking offline (is_active = false)');
       _updatePresence(isOnline: false);
     });
   }
