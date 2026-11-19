@@ -338,13 +338,20 @@ class TugasService {
         if (assignment != null) {
           assignmentId = assignment['id']?.toString();
           taskId = assignment['task_id']?.toString() ?? idStr;
-          task = assignment['checklist_tasks'] as Map<String, dynamic>?;
+          final rawTask = assignment['checklist_tasks'];
+          if (rawTask is Map<String, dynamic>) {
+            task = rawTask;
+          } else if (rawTask is List && rawTask.isNotEmpty) {
+            task = rawTask.first as Map<String, dynamic>?;
+          }
           isSubmitted = assignment['status'] == 'completed' || assignment['submitted_at'] != null;
         } else {
           // Coba cari assignment berdasarkan task_id dan logged in user_id
           try {
             final prefs = await SharedPreferences.getInstance();
-            final userId = prefs.getString("user_id") ?? prefs.getString("id");
+            final userId = prefs.getString("user_id") ??
+                prefs.getString("id") ??
+                client.auth.currentUser?.id;
             if (userId != null && userId.isNotEmpty) {
               assignment = await client
                   .from('checklist_assignments')
@@ -356,18 +363,38 @@ class TugasService {
               if (assignment != null) {
                 assignmentId = assignment['id']?.toString();
                 taskId = assignment['task_id']?.toString() ?? idStr;
-                task = assignment['checklist_tasks'] as Map<String, dynamic>?;
+                final rawTask = assignment['checklist_tasks'];
+                if (rawTask is Map<String, dynamic>) {
+                  task = rawTask;
+                } else if (rawTask is List && rawTask.isNotEmpty) {
+                  task = rawTask.first as Map<String, dynamic>?;
+                }
                 isSubmitted = assignment['status'] == 'completed' || assignment['submitted_at'] != null;
               }
             }
           } catch (_) {}
+        }
 
-          // Jika belum ketemu task-nya, ambil langsung dari checklist_tasks
-          task ??= await client
-              .from('checklist_tasks')
-              .select('*')
-              .eq('id', idStr)
-              .maybeSingle();
+        // Jika task belum didapat dari relasi join, fetch langsung dari tabel checklist_tasks
+        if (task == null && taskId.isNotEmpty) {
+          try {
+            task = await client
+                .from('checklist_tasks')
+                .select('*')
+                .eq('id', taskId)
+                .maybeSingle();
+          } catch (_) {}
+        }
+
+        // Jika masih null dan idStr != taskId, coba fetch dengan idStr
+        if (task == null && idStr != taskId) {
+          try {
+            task = await client
+                .from('checklist_tasks')
+                .select('*')
+                .eq('id', idStr)
+                .maybeSingle();
+          } catch (_) {}
         }
 
         if (task != null) {
@@ -444,6 +471,9 @@ class TugasService {
     }
 
     if (res.statusCode != 200) {
+      if (res.body.contains('Akses hanya untuk admin')) {
+        throw Exception("Detail tugas sedang dipersiapkan oleh server. Silakan klik Coba Lagi.");
+      }
       throw Exception("Gagal ambil detail ceklis: ${res.body}");
     }
 

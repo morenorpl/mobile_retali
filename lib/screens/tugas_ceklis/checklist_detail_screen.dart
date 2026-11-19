@@ -119,7 +119,7 @@ class _ChecklistDetailScreenState extends State<ChecklistDetailScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        snapshot.error.toString(),
+                        snapshot.error.toString().replaceFirst('Exception: ', ''),
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.grey[600], fontSize: 13),
                       ),
