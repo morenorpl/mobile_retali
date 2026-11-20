@@ -323,49 +323,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               ),
-              const SizedBox(height: 20),
-
-              // 💬 Potensi Masalah
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Potensi Masalah",
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                  ),
-                  TextButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(
-                      Icons.arrow_forward_ios,
-                      size: 14,
-                      color: Colors.black,
-                    ),
-                    label: const Text(
-                      "Lihat Semua",
-                      style: TextStyle(color: Colors.black, fontSize: 13),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              SizedBox(
-                height: 120,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: const [
-                    PotensiCard(
-                      imagePath: "assets/home/kesehatan.png",
-                      title: "Kumpulan\nMasalah Kesehatan",
-                    ),
-                    SizedBox(width: 12),
-                    PotensiCard(
-                      imagePath: "assets/home/ibadah.png",
-                      title: "Kumpulan\nMasalah Ibadah",
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         ),
@@ -554,45 +511,6 @@ class MenuItemWidget extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-
-class PotensiCard extends StatelessWidget {
-  final String imagePath;
-  final String title;
-  const PotensiCard({super.key, required this.imagePath, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 235,
-      height: 90,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        image: DecorationImage(image: AssetImage(imagePath), fit: BoxFit.cover),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: Colors.black.withOpacity(0.3),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Align(
-            alignment: Alignment.bottomLeft,
-            child: Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
         ),
       ),
     );

@@ -102,9 +102,9 @@ class NotificationService {
 
   /// Memeriksa status notifikasi yang ditujukan untuk user yang sedang login,
   /// dan memunculkan pop-up pemberitahuan sesuai status waktunya:
-  /// - Merah (24 Jam sebelum): "24 jam lagi [nama notif] harus dilaksanakan"
+  /// - Hijau (24 Jam sebelum): "24 jam lagi [nama notif] harus dilaksanakan"
   /// - Kuning (12 Jam sebelum): "12 jam lagi [nama notif] harus dilaksanakan"
-  /// - Hijau (Saat kegiatan): "Saat ini [nama notif] harus dilaksanakan"
+  /// - Merah (Saat kegiatan): "Saat ini [nama notif] harus dilaksanakan"
   /// - Abu-Abu (> 24 Jam): Belum terkirim ke petugas
   static Future<void> checkAndTriggerPendingNotifications() async {
     try {
@@ -117,8 +117,8 @@ class NotificationService {
         final title = item.title.trim().isNotEmpty ? item.title.trim() : 'kegiatan';
 
         switch (item.status) {
-          case NotificationStatus.merah:
-            final key = 'notif_alert_${item.id}_merah';
+          case NotificationStatus.hijau:
+            final key = 'notif_alert_${item.id}_hijau';
             final alreadySent = prefs.getBool(key) ?? false;
             if (!alreadySent) {
               await showNotification(
@@ -127,7 +127,7 @@ class NotificationService {
                 payload: item.id,
               );
               await prefs.setBool(key, true);
-              debugPrint('🔔 [Triggered 24 Jam] Notifikasi merah terkirim untuk: $title');
+              debugPrint('🔔 [Triggered 24 Jam] Notifikasi hijau terkirim untuk: $title');
             }
             break;
 
@@ -145,8 +145,8 @@ class NotificationService {
             }
             break;
 
-          case NotificationStatus.hijau:
-            final key = 'notif_alert_${item.id}_hijau';
+          case NotificationStatus.merah:
+            final key = 'notif_alert_${item.id}_merah';
             final alreadySent = prefs.getBool(key) ?? false;
             if (!alreadySent) {
               await showNotification(
@@ -155,7 +155,7 @@ class NotificationService {
                 payload: item.id,
               );
               await prefs.setBool(key, true);
-              debugPrint('🔔 [Triggered Saat Kegiatan] Notifikasi hijau terkirim untuk: $title');
+              debugPrint('🔔 [Triggered Saat Kegiatan] Notifikasi merah terkirim untuk: $title');
             }
             break;
 

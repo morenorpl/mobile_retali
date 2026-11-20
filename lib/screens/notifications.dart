@@ -338,8 +338,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
               const SizedBox(height: 10),
               _guideItem(
-                color: const Color(0xFFEF4444),
-                title: 'Merah (Peringatan 24 Jam)',
+                color: const Color(0xFF10B981),
+                title: 'Hijau (Peringatan 24 Jam)',
                 desc: 'Jadwal kegiatan mendekati rentang 12 hingga 24 jam lagi. Mengingatkan "24 jam lagi harus dilaksanakan".',
               ),
               const SizedBox(height: 10),
@@ -350,8 +350,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
               const SizedBox(height: 10),
               _guideItem(
-                color: const Color(0xFF10B981),
-                title: 'Hijau (Saat Kegiatan)',
+                color: const Color(0xFFEF4444),
+                title: 'Merah (Saat Kegiatan)',
                 desc: 'Waktu pelaksanaan kegiatan telah tiba atau sedang berlangsung saat ini.',
               ),
               const SizedBox(height: 16),

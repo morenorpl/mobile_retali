@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 
 /// 4 Status Notifikasi sesuai sistem Retali:
 /// - abuAbu : Belum ada peringatan (> 24 jam sebelum kegiatan atau tanpa jadwal)
-/// - merah  : Peringatan 24 jam sebelum kegiatan (12 < diffHours <= 24)
+/// - hijau  : Peringatan 24 jam sebelum kegiatan (12 < diffHours <= 24)
 /// - kuning : Peringatan 12 jam sebelum kegiatan (0 < diffHours <= 12)
-/// - hijau  : Saat kegiatan tiba / sedang berlangsung (diffHours <= 0)
+/// - merah  : Saat kegiatan tiba / sedang berlangsung (diffHours <= 0)
 enum NotificationStatus {
   abuAbu,
-  merah,
-  kuning,
   hijau,
+  kuning,
+  merah,
 }
 
 class NotificationItem {
@@ -54,11 +54,11 @@ class NotificationItem {
     if (diff == null) return NotificationStatus.abuAbu;
 
     if (diff <= 0) {
-      return NotificationStatus.hijau;
+      return NotificationStatus.merah;
     } else if (diff <= 12) {
       return NotificationStatus.kuning;
     } else if (diff <= 24) {
-      return NotificationStatus.merah;
+      return NotificationStatus.hijau;
     } else {
       return NotificationStatus.abuAbu;
     }
@@ -67,11 +67,11 @@ class NotificationItem {
   /// Label singkat status peringatan (sama persis dengan web Retali-sistem)
   String get statusLabel {
     switch (status) {
-      case NotificationStatus.hijau:
+      case NotificationStatus.merah:
         return 'Saat Kegiatan';
       case NotificationStatus.kuning:
         return 'Peringatan 12 Jam';
-      case NotificationStatus.merah:
+      case NotificationStatus.hijau:
         return 'Peringatan 24 Jam';
       case NotificationStatus.abuAbu:
         return 'Belum Ada Peringatan';
@@ -81,11 +81,11 @@ class NotificationItem {
   /// Penjelasan detail status peringatan
   String get statusDescription {
     switch (status) {
-      case NotificationStatus.hijau:
+      case NotificationStatus.merah:
         return 'Petugas telah diingatkan saat kegiatan';
       case NotificationStatus.kuning:
         return 'Petugas telah diingatkan 12 jam sebelum kegiatan';
-      case NotificationStatus.merah:
+      case NotificationStatus.hijau:
         return 'Petugas telah diingatkan 24 jam sebelum kegiatan';
       case NotificationStatus.abuAbu:
         return 'Belum ada peringatan terkirim (jadwal > 24 jam)';
@@ -93,18 +93,18 @@ class NotificationItem {
   }
 
   /// Pesan pengingat dinamis sesuai instruksi:
-  /// - merah: '24 jam lagi [notif a] harus dilaksanakan'
+  /// - hijau: '24 jam lagi [notif a] harus dilaksanakan'
   /// - kuning: '12 jam lagi [notif a] harus dilaksanakan'
-  /// - hijau: 'Saatnya [notif a] dilaksanakan'
+  /// - merah: 'Saatnya [notif a] dilaksanakan'
   /// - abu-abu: 'Notifikasi telah dibuat admin (jadwal belum tiba)'
   String get dynamicReminderText {
     final cleanTitle = title.trim().isNotEmpty ? title.trim() : 'kegiatan';
     switch (status) {
-      case NotificationStatus.hijau:
+      case NotificationStatus.merah:
         return 'Saat ini $cleanTitle harus dilaksanakan';
       case NotificationStatus.kuning:
         return '12 jam lagi $cleanTitle harus dilaksanakan';
-      case NotificationStatus.merah:
+      case NotificationStatus.hijau:
         return '24 jam lagi $cleanTitle harus dilaksanakan';
       case NotificationStatus.abuAbu:
         return 'Notifikasi telah dibuat oleh admin (belum masuk waktu pengingat)';
@@ -114,12 +114,12 @@ class NotificationItem {
   /// Warna utama badge/icon
   Color get statusColor {
     switch (status) {
-      case NotificationStatus.hijau:
-        return const Color(0xFF10B981); // Emerald 500
-      case NotificationStatus.kuning:
-        return const Color(0xFFF59E0B); // Amber 500
       case NotificationStatus.merah:
         return const Color(0xFFEF4444); // Rose/Red 500
+      case NotificationStatus.kuning:
+        return const Color(0xFFF59E0B); // Amber 500
+      case NotificationStatus.hijau:
+        return const Color(0xFF10B981); // Emerald 500
       case NotificationStatus.abuAbu:
         return const Color(0xFF9CA3AF); // Gray 400
     }
@@ -128,12 +128,12 @@ class NotificationItem {
   /// Warna latar badge
   Color get statusBgColor {
     switch (status) {
-      case NotificationStatus.hijau:
-        return const Color(0xFFECFDF5); // Emerald 50
-      case NotificationStatus.kuning:
-        return const Color(0xFFFFFBEB); // Amber 50
       case NotificationStatus.merah:
         return const Color(0xFFFFF1F2); // Rose 50
+      case NotificationStatus.kuning:
+        return const Color(0xFFFFFBEB); // Amber 50
+      case NotificationStatus.hijau:
+        return const Color(0xFFECFDF5); // Emerald 50
       case NotificationStatus.abuAbu:
         return const Color(0xFFF3F4F6); // Gray 100
     }
@@ -142,12 +142,12 @@ class NotificationItem {
   /// Warna border badge
   Color get statusBorderColor {
     switch (status) {
-      case NotificationStatus.hijau:
-        return const Color(0xFFA7F3D0); // Emerald 200
-      case NotificationStatus.kuning:
-        return const Color(0xFFFDE68A); // Amber 200
       case NotificationStatus.merah:
         return const Color(0xFFFECDD3); // Rose 200
+      case NotificationStatus.kuning:
+        return const Color(0xFFFDE68A); // Amber 200
+      case NotificationStatus.hijau:
+        return const Color(0xFFA7F3D0); // Emerald 200
       case NotificationStatus.abuAbu:
         return const Color(0xFFE5E7EB); // Gray 200
     }
@@ -156,12 +156,12 @@ class NotificationItem {
   /// Icon representatif untuk status
   IconData get statusIcon {
     switch (status) {
-      case NotificationStatus.hijau:
-        return Icons.check_circle_outline;
-      case NotificationStatus.kuning:
-        return Icons.access_time_filled;
       case NotificationStatus.merah:
         return Icons.warning_amber_rounded;
+      case NotificationStatus.kuning:
+        return Icons.access_time_filled;
+      case NotificationStatus.hijau:
+        return Icons.check_circle_outline;
       case NotificationStatus.abuAbu:
         return Icons.hourglass_empty_rounded;
     }

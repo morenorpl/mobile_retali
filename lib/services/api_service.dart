@@ -1136,21 +1136,21 @@ class ApiService {
       }
     }
 
-    // Urutkan notifikasi: yang mendesak / aktif (hijau, kuning, merah) di atas,
+    // Urutkan notifikasi: yang mendesak / aktif (merah, kuning, hijau) di atas,
     // lalu urutkan berdasarkan startDate / createdAt terbaru
     items.sort((a, b) {
-      final rankA = a.status == NotificationStatus.hijau
+      final rankA = a.status == NotificationStatus.merah
           ? 0
           : a.status == NotificationStatus.kuning
               ? 1
-              : a.status == NotificationStatus.merah
+              : a.status == NotificationStatus.hijau
                   ? 2
                   : 3;
-      final rankB = b.status == NotificationStatus.hijau
+      final rankB = b.status == NotificationStatus.merah
           ? 0
           : b.status == NotificationStatus.kuning
               ? 1
-              : b.status == NotificationStatus.merah
+              : b.status == NotificationStatus.hijau
                   ? 2
                   : 3;
 
