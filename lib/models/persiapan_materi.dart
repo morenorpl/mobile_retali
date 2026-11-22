@@ -7,6 +7,7 @@ class PersiapanMateri {
   final String category;
   final String? visibility;
   final String? attachmentUrl;
+  final String? cover;
   final bool isPublished;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -20,10 +21,18 @@ class PersiapanMateri {
     required this.category,
     this.visibility,
     this.attachmentUrl,
+    this.cover,
     this.isPublished = false,
     this.createdAt,
     this.updatedAt,
   });
+
+  /// Getter untuk URL cover (mendukung kolom 'cover' atau fallback 'attachment_url')
+  String? get displayCover {
+    if (cover != null && cover!.trim().isNotEmpty) return cover!.trim();
+    if (attachmentUrl != null && attachmentUrl!.trim().isNotEmpty) return attachmentUrl!.trim();
+    return null;
+  }
 
   factory PersiapanMateri.fromMap(Map<String, dynamic> map) {
     return PersiapanMateri(
@@ -35,6 +44,7 @@ class PersiapanMateri {
       category: map['category']?.toString() ?? '',
       visibility: map['visibility']?.toString(),
       attachmentUrl: map['attachment_url']?.toString(),
+      cover: map['cover']?.toString(),
       isPublished: map['is_published'] == true,
       createdAt: map['created_at'] != null
           ? DateTime.tryParse(map['created_at'].toString())
@@ -55,6 +65,7 @@ class PersiapanMateri {
       'category': category,
       'visibility': visibility,
       'attachment_url': attachmentUrl,
+      'cover': cover,
       'is_published': isPublished,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),

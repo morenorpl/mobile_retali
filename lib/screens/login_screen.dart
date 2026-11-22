@@ -60,6 +60,18 @@ class _LoginScreenState extends State<LoginScreen>
       return;
     }
 
+    if (!email.toLowerCase().endsWith('@retali.com')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.redAccent,
+          content: Text(
+            'Email petugas wajib menggunakan domain @retali.com',
+          ),
+        ),
+      );
+      return;
+    }
+
     setState(() => _loading = true);
 
     final result = await ApiService.login(email, pass);

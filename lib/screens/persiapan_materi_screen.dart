@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import '../helpers/file_saver.dart';
 import '../models/persiapan_materi.dart';
 import '../services/persiapan_service.dart';
 
@@ -51,13 +54,73 @@ class _PersiapanMateriScreenState extends State<PersiapanMateriScreen> {
         .trim();
   }
 
+  Widget _buildCoverImage(String url) {
+    if (url.startsWith('data:image/')) {
+      try {
+        final commaIdx = url.indexOf(',');
+        if (commaIdx != -1) {
+          final base64Str = url.substring(commaIdx + 1).trim();
+          final bytes = base64Decode(base64Str);
+          return Image.memory(
+            bytes,
+            fit: BoxFit.contain,
+            width: double.infinity,
+          );
+        }
+      } catch (e) {
+        debugPrint("Error decoding base64 image: $e");
+      }
+      return Container(
+        height: 120,
+        color: Colors.grey.shade100,
+        alignment: Alignment.center,
+        child: Icon(Icons.broken_image_outlined, color: Colors.grey.shade400, size: 36),
+      );
+    }
+    return Image.network(
+      url,
+      fit: BoxFit.contain,
+      width: double.infinity,
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return Container(
+          height: 180,
+          color: Colors.grey.shade100,
+          alignment: Alignment.center,
+          child: const CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Color(0xFF842D62),
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) => Container(
+        height: 120,
+        color: Colors.grey.shade100,
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.broken_image_outlined, color: Colors.grey.shade400, size: 36),
+            const SizedBox(height: 6),
+            Text(
+              "Gagal memuat gambar",
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showDetailDialog(BuildContext context, PersiapanMateri item) {
     final cleanDesc = _stripHtml(item.description);
     final cleanContent = _stripHtml(item.content);
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
@@ -86,15 +149,29 @@ class _PersiapanMateriScreenState extends State<PersiapanMateriScreen> {
             ],
           ],
         ),
-        content: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.55,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
+        content: SizedBox(
+          width: MediaQuery.of(dialogCtx).size.width,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(dialogCtx).size.height * 0.65,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 🖼️ Tampilkan gambar cover utuh di atas teks jika tersedia
+                  if (item.displayCover != null && item.displayCover!.isNotEmpty) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: double.infinity,
+                        constraints: const BoxConstraints(maxHeight: 220),
+                        child: _buildCoverImage(item.displayCover!),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                 if (cleanDesc.isNotEmpty) ...[
                   Text(
                     cleanDesc,
@@ -115,7 +192,7 @@ class _PersiapanMateriScreenState extends State<PersiapanMateriScreen> {
                       color: Colors.black87,
                     ),
                   ),
-                if (cleanDesc.isEmpty && cleanContent.isEmpty)
+                if (cleanDesc.isEmpty && cleanContent.isEmpty && (item.displayCover == null || item.displayCover!.isEmpty))
                   Text(
                     "Tidak ada deskripsi tambahan.",
                     style: TextStyle(
@@ -128,7 +205,22 @@ class _PersiapanMateriScreenState extends State<PersiapanMateriScreen> {
             ),
           ),
         ),
-        actions: [
+      ),
+      actions: [
+          // 📥 Tombol Download Gambar (hanya tampil jika materi memiliki cover foto)
+          if (item.displayCover != null && item.displayCover!.isNotEmpty)
+            TextButton.icon(
+              onPressed: () => _downloadImage(dialogCtx, item),
+              icon: const Icon(Icons.download_rounded, size: 18),
+              label: const Text(
+                "Unduh Gambar",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF10B981),
+              ),
+            ),
+          // 📋 Tombol Salin Teks
           TextButton.icon(
             onPressed: () async {
               final textToCopy = [
@@ -137,13 +229,15 @@ class _PersiapanMateriScreenState extends State<PersiapanMateriScreen> {
                   item.subTitle!.trim(),
                 if (cleanDesc.isNotEmpty) cleanDesc,
                 if (cleanContent.isNotEmpty) cleanContent,
+                if (item.displayCover != null && item.displayCover!.startsWith('http'))
+                  "\n[Foto Cover]: ${item.displayCover!.trim()}",
               ].join('\n\n');
 
               await Clipboard.setData(ClipboardData(text: textToCopy));
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+              if (dialogCtx.mounted) {
+                ScaffoldMessenger.of(dialogCtx).showSnackBar(
                   SnackBar(
-                    content: const Text('Materi berhasil disalin ke clipboard'),
+                    content: const Text('Materi berhasil disalin ke clipboard.'),
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -163,9 +257,9 @@ class _PersiapanMateriScreenState extends State<PersiapanMateriScreen> {
             ),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogCtx),
             style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF842D62),
+              foregroundColor: Colors.grey.shade600,
             ),
             child: const Text(
               "Tutup",
@@ -175,6 +269,91 @@ class _PersiapanMateriScreenState extends State<PersiapanMateriScreen> {
         ],
       ),
     );
+  }
+
+  /// Mengunduh / menyimpan foto cover materi ke penyimpanan perangkat
+  Future<void> _downloadImage(BuildContext context, PersiapanMateri item) async {
+    final coverUrl = item.displayCover;
+    if (coverUrl == null || coverUrl.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Materi ini tidak memiliki gambar untuk diunduh.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Sedang mengunduh gambar...'),
+        duration: Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    try {
+      Uint8List bytes;
+      if (coverUrl.startsWith('data:image/')) {
+        final commaIdx = coverUrl.indexOf(',');
+        if (commaIdx == -1) throw Exception("Format gambar base64 tidak valid");
+        final base64Str = coverUrl.substring(commaIdx + 1).trim();
+        bytes = base64Decode(base64Str);
+      } else {
+        final response = await http.get(Uri.parse(coverUrl));
+        if (response.statusCode != 200) {
+          throw Exception("Gagal mengunduh gambar dari server (Kode: ${response.statusCode})");
+        }
+        bytes = response.bodyBytes;
+      }
+
+      final isPng = coverUrl.contains('image/png') || coverUrl.toLowerCase().endsWith('.png');
+      final ext = isPng ? 'png' : 'jpg';
+      final cleanTitle = item.title
+          .replaceAll(RegExp(r'[^\w\s\-]'), '')
+          .trim()
+          .replaceAll(' ', '_');
+      final fileName = '${cleanTitle}_${DateTime.now().millisecondsSinceEpoch}.$ext';
+
+      // Download atau simpan file (otomatis bekerja di Web, Android, iOS)
+      await downloadOrSaveFile(bytes, fileName);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF10B981),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Gambar berhasil diunduh: $fileName',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("Gagal mengunduh gambar: $e");
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.redAccent,
+            content: Text('Gagal mengunduh gambar: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -395,12 +574,23 @@ class _PersiapanMateriScreenState extends State<PersiapanMateriScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset(
-                "assets/LogoRetali.png",
-                height: 52,
-                color: Colors.white,
-                fit: BoxFit.contain,
-              ),
+              if (item.displayCover != null && item.displayCover!.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    height: 52,
+                    width: 52,
+                    color: Colors.white.withOpacity(0.1),
+                    child: _buildCoverImage(item.displayCover!),
+                  ),
+                )
+              else
+                Image.asset(
+                  "assets/LogoRetali.png",
+                  height: 52,
+                  color: Colors.white,
+                  fit: BoxFit.contain,
+                ),
               const SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
