@@ -23,7 +23,8 @@ class _JamaahAttendancePageState extends State<JamaahAttendancePage> {
   bool _saving = false;
 
   String _searchQuery = '';
-  String _filterStatus = 'ALL';
+  String _filterStatus = 'BELUM_ABSEN';
+  final Set<int> _animatingOutIds = {};
 
   List<AbsensiJamaahDetail> _jamaah = [];
   List<AbsensiJamaahDetail> _filteredJamaah = [];
@@ -83,8 +84,8 @@ class _JamaahAttendancePageState extends State<JamaahAttendancePage> {
 
       setState(() {
         _jamaah = list;
-        _filteredJamaah = list;
         _updateCounters();
+        _filter();
       });
     } catch (e) {
       debugPrint("ERROR LOAD DETAIL: $e");
@@ -126,7 +127,9 @@ class _JamaahAttendancePageState extends State<JamaahAttendancePage> {
 
     if (_filterStatus != 'ALL') {
       result = result
-          .where((j) => _localStatus[j.jamaahId] == _filterStatus)
+          .where((j) =>
+              _localStatus[j.jamaahId] == _filterStatus ||
+              _animatingOutIds.contains(j.jamaahId))
           .toList();
     }
 
@@ -147,6 +150,11 @@ class _JamaahAttendancePageState extends State<JamaahAttendancePage> {
     setState(() => _filteredJamaah = result);
   }
 
+  bool _willDismiss(String targetStatus, String currentStatus) {
+    if (_filterStatus == 'ALL') return false;
+    return targetStatus != _filterStatus;
+  }
+
   void _updateStatus(int id, String status) {
     setState(() {
       _localStatus[id] = status;
@@ -160,10 +168,18 @@ class _JamaahAttendancePageState extends State<JamaahAttendancePage> {
         }
       }
       _updateCounters();
-      _filter();
-
+      // Tandai item jika akan keluar dari tab saat ini sehingga tetap ditahan di _filteredJamaah sampai animasi selesai
+      if (_filterStatus != 'ALL' && status != _filterStatus) {
+        _animatingOutIds.add(id);
+      }
       _saveDraft();
+    });
+  }
 
+  void _onDismissComplete(int id) {
+    setState(() {
+      _animatingOutIds.remove(id);
+      _filter();
     });
   }
 
@@ -270,12 +286,78 @@ class _JamaahAttendancePageState extends State<JamaahAttendancePage> {
                 _buildStats(),
                 _buildFilterTabs(),
                 Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _filteredJamaah.length,
-                    itemBuilder: (context, index) =>
-                        _buildCard(_filteredJamaah[index]),
-                  ),
+                  child: _filteredJamaah.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.assignment_turned_in_outlined,
+                                  size: 64,
+                                  color: Colors.grey[400],
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  _filterStatus == 'BELUM_ABSEN'
+                                      ? 'Semua jamaah sudah diabsen'
+                                      : 'Tidak ada data jamaah',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _filterStatus == 'BELUM_ABSEN'
+                                      ? 'Silakan lihat tab Hadir atau Tidak'
+                                      : 'Coba ubah filter atau kata kunci pencarian',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[400],
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _filteredJamaah.length,
+                          itemBuilder: (context, index) {
+                            final j = _filteredJamaah[index];
+                            final status =
+                                _localStatus[j.jamaahId] ?? 'BELUM_ABSEN';
+                            final showCatatan =
+                                _showCatatan[j.jamaahId] ?? false;
+
+                            return _AbsensiCardItem(
+                              key: ValueKey(j.jamaahId),
+                              jamaah: j,
+                              status: status,
+                              showCatatan: showCatatan,
+                              catatanCtrl: _catatanCtrl[j.jamaahId] ??
+                                  TextEditingController(),
+                              willDismissOnStatus: (targetStatus) =>
+                                  _willDismiss(targetStatus, status),
+                              onStatusChanged: (newStatus) =>
+                                  _updateStatus(j.jamaahId, newStatus),
+                              onCatatanChanged: (val) {
+                                _saveDraft();
+                                if (val.isNotEmpty && !showCatatan) {
+                                  setState(() {
+                                    _showCatatan[j.jamaahId] = true;
+                                  });
+                                }
+                              },
+                              onDismissComplete: () =>
+                                  _onDismissComplete(j.jamaahId),
+                            );
+                          },
+                        ),
                 ),
               ],
             ),
@@ -330,7 +412,7 @@ class _JamaahAttendancePageState extends State<JamaahAttendancePage> {
   }
 
   // ==========================================================
-  // STATS
+  // STATS (BELUM, HADIR, TIDAK, SEMUA)
   // ==========================================================
 
   Widget _buildStats() {
@@ -338,58 +420,70 @@ class _JamaahAttendancePageState extends State<JamaahAttendancePage> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          _statBox('Semua', _jamaah.length, Icons.people, Colors.purple),
+          _statBox('Belum', _belumAbsenCount, Icons.access_time, Colors.orange, 'BELUM_ABSEN'),
           const SizedBox(width: 8),
-          _statBox('Belum', _belumAbsenCount, Icons.access_time, Colors.orange),
+          _statBox('Hadir', _hadirCount, Icons.check_circle, Colors.green, 'HADIR'),
           const SizedBox(width: 8),
-          _statBox('Hadir', _hadirCount, Icons.check_circle, Colors.green),
+          _statBox('Tidak', _tidakHadirCount, Icons.cancel, Colors.red, 'TIDAK_HADIR'),
           const SizedBox(width: 8),
-          _statBox('Tidak', _tidakHadirCount, Icons.cancel, Colors.red),
+          _statBox('Semua', _jamaah.length, Icons.people, Colors.purple, 'ALL'),
         ],
       ),
     );
   }
 
-  Widget _statBox(String label, int count, IconData icon, Color color) {
+  Widget _statBox(String label, int count, IconData icon, Color color, [String? targetFilter]) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.05),
-              spreadRadius: 1,
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(height: 4),
-            Text(
-              count.toString(),
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: color,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: targetFilter != null
+            ? () {
+                setState(() {
+                  _filterStatus = targetFilter;
+                  _animatingOutIds.clear();
+                  _filter();
+                });
+              }
+            : null,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.05),
+                spreadRadius: 1,
+                blurRadius: 3,
+                offset: const Offset(0, 1),
               ),
-            ),
-            Text(
-              label,
-              style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-            ),
-          ],
+            ],
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(height: 4),
+              Text(
+                count.toString(),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              Text(
+                label,
+                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   // ==========================================================
-  // FILTER TABS
+  // FILTER TABS (BELUM, HADIR, TIDAK, SEMUA)
   // ==========================================================
 
   Widget _buildFilterTabs() {
@@ -399,13 +493,13 @@ class _JamaahAttendancePageState extends State<JamaahAttendancePage> {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _filterChip('Semua', 'ALL'),
-            const SizedBox(width: 8),
             _filterChip('Belum', 'BELUM_ABSEN'),
             const SizedBox(width: 8),
             _filterChip('Hadir', 'HADIR'),
             const SizedBox(width: 8),
             _filterChip('Tidak', 'TIDAK_HADIR'),
+            const SizedBox(width: 8),
+            _filterChip('Semua', 'ALL'),
           ],
         ),
       ),
@@ -427,7 +521,8 @@ class _JamaahAttendancePageState extends State<JamaahAttendancePage> {
       selected: isSelected,
       onSelected: (selected) {
         setState(() {
-          _filterStatus = selected ? value : 'ALL';
+          _filterStatus = value;
+          _animatingOutIds.clear();
           _filter();
         });
       },
@@ -441,235 +536,8 @@ class _JamaahAttendancePageState extends State<JamaahAttendancePage> {
   }
 
   // ==========================================================
-  // CARD
+  // DRAFT & STORAGE
   // ==========================================================
-
-  Widget _buildCard(AbsensiJamaahDetail j) {
-    final status = _localStatus[j.jamaahId] ?? 'BELUM_ABSEN';
-    final showCatatan = _showCatatan[j.jamaahId] ?? false;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.05),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Nomor dan Nama
-                Text(
-                  '${j.urutan}. ${j.nama}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Info Kloter dan Bus - MEMPERBAIKI ICON DISINI
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    _infoChip(
-                      icon: Icons
-                          .flight_takeoff, // Diperbaiki dari flight_takeout
-                      label: 'Kloter ${j.kloter ?? '357'}',
-                    ),
-                    _infoChip(
-                      icon: Icons.directions_bus,
-                      label: 'Bus ${j.bus ?? 1}',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Nomor HP
-                Row(
-                  children: [
-                    Icon(Icons.phone, size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 8),
-                    Text(
-                      j.hp ?? '-',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-
-                // Nomor Paspor - MEMPERBAIKI WARNA DISINI
-                // Nomor Paspor - MEMPERBAIKI ICON DISINI
-                Row(
-                  children: [
-                    Icon(
-                      Icons.card_membership,
-                      size: 14,
-                      color: Colors.grey[500],
-                    ), // Diganti dari Icons.passport
-                    const SizedBox(width: 8),
-                    Text(
-                      j.paspor ?? '-',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
-
-          // Tombol Status
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _statusButton(
-                        id: j.jamaahId,
-                        target: 'HADIR',
-                        color: Colors.green,
-                        current: status,
-                        icon: Icons.check,
-                        label: 'Hadir',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _statusButton(
-                        id: j.jamaahId,
-                        target: 'TIDAK_HADIR',
-                        color: Colors.red,
-                        current: status,
-                        icon: Icons.close,
-                        label: 'Tidak',
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Catatan (muncul otomatis jika status TIDAK_HADIR)
-                if (showCatatan) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[200]!),
-                    ),
-                    child: TextField(
-                      controller: _catatanCtrl[j.jamaahId],
-                      maxLines: 2,
-                      minLines: 1,
-                      decoration: InputDecoration(
-                        hintText: 'Opsional: Catatan tambahan',
-                        hintStyle: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[400],
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.all(12),
-                      ),
-                      onChanged: (value) {
-                        _saveDraft();
-                        // Jika ada isian catatan, pertahankan tampilan
-                        if (value.isNotEmpty && !showCatatan) {
-                          setState(() {
-                            _showCatatan[j.jamaahId] = true;
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _infoChip({required IconData icon, required String label}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: Colors.grey[600]),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.grey[700],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _statusButton({
-    required int id,
-    required String target,
-    required Color color,
-    required String current,
-    required IconData icon,
-    required String label,
-  }) {
-    final active = current == target;
-
-    return GestureDetector(
-      onTap: () => _updateStatus(id, target),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: active ? color : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: active ? color : color.withOpacity(0.3),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 16, color: active ? Colors.white : color),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: active ? Colors.white : color,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Future<void> _saveDraft() async {
   final prefs = await SharedPreferences.getInstance();
@@ -772,6 +640,337 @@ Future<void> _loadDraft() async {
                     ),
                   ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ==========================================================
+// ANIMATED CARD ITEM (SMOOTH FADE TO RIGHT)
+// ==========================================================
+
+class _AbsensiCardItem extends StatefulWidget {
+  final AbsensiJamaahDetail jamaah;
+  final String status;
+  final bool showCatatan;
+  final TextEditingController catatanCtrl;
+  final bool Function(String targetStatus) willDismissOnStatus;
+  final void Function(String newStatus) onStatusChanged;
+  final void Function(String text) onCatatanChanged;
+  final VoidCallback onDismissComplete;
+
+  const _AbsensiCardItem({
+    super.key,
+    required this.jamaah,
+    required this.status,
+    required this.showCatatan,
+    required this.catatanCtrl,
+    required this.willDismissOnStatus,
+    required this.onStatusChanged,
+    required this.onCatatanChanged,
+    required this.onDismissComplete,
+  });
+
+  @override
+  State<_AbsensiCardItem> createState() => _AbsensiCardItemState();
+}
+
+class _AbsensiCardItemState extends State<_AbsensiCardItem>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  late Animation<Offset> _slideAnim;
+  late Animation<double> _fadeAnim;
+  late Animation<double> _sizeAnim;
+  bool _isDismissing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+
+    // Animasi geser halus ke kanan (fade to right)
+    _slideAnim = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(1.0, 0.0),
+    ).animate(CurvedAnimation(
+      parent: _animController,
+      curve: const Interval(0.0, 0.9, curve: Curves.easeOutCubic),
+    ));
+
+    // Animasi fade out
+    _fadeAnim = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _animController,
+      curve: const Interval(0.0, 0.8, curve: Curves.easeOut),
+    ));
+
+    // Animasi ciutkan ukuran wadah setelah mulai bergeser ke kanan
+    _sizeAnim = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _animController,
+      curve: const Interval(0.25, 1.0, curve: Curves.easeInOut),
+    ));
+
+    _animController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        widget.onDismissComplete();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  void _handleStatusTap(String target) {
+    if (_isDismissing) return;
+
+    final willDismiss = widget.willDismissOnStatus(target);
+    widget.onStatusChanged(target);
+
+    if (willDismiss) {
+      setState(() => _isDismissing = true);
+      _animController.forward();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final j = widget.jamaah;
+    final status = widget.status;
+    final showCatatan = widget.showCatatan;
+
+    return SizeTransition(
+      sizeFactor: _sizeAnim,
+      axisAlignment: 0.0,
+      child: SlideTransition(
+        position: _slideAnim,
+        child: FadeTransition(
+          opacity: _fadeAnim,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.05),
+                  spreadRadius: 1,
+                  blurRadius: 5,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Nomor dan Nama
+                      Text(
+                        '${j.urutan}. ${j.nama}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Info Kloter dan Bus
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          _infoChip(
+                            icon: Icons.flight_takeoff,
+                            label: 'Kloter ${j.kloter ?? '357'}',
+                          ),
+                          _infoChip(
+                            icon: Icons.directions_bus,
+                            label: 'Bus ${j.bus ?? 1}',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Nomor HP
+                      Row(
+                        children: [
+                          Icon(Icons.phone, size: 14, color: Colors.grey[500]),
+                          const SizedBox(width: 8),
+                          Text(
+                            j.hp ?? '-',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+
+                      // Nomor Paspor
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.card_membership,
+                            size: 14,
+                            color: Colors.grey[500],
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            j.paspor ?? '-',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+
+                // Tombol Status
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _statusButton(
+                              target: 'HADIR',
+                              color: Colors.green,
+                              current: status,
+                              icon: Icons.check,
+                              label: 'Hadir',
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _statusButton(
+                              target: 'TIDAK_HADIR',
+                              color: Colors.red,
+                              current: status,
+                              icon: Icons.close,
+                              label: 'Tidak',
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Catatan (muncul otomatis jika status TIDAK_HADIR atau ada catatan)
+                      if (showCatatan) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
+                          child: TextField(
+                            controller: widget.catatanCtrl,
+                            maxLines: 2,
+                            minLines: 1,
+                            decoration: InputDecoration(
+                              hintText: 'Opsional: Catatan tambahan',
+                              hintStyle: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[400],
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.all(12),
+                            ),
+                            onChanged: widget.onCatatanChanged,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _infoChip({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: Colors.grey[600]),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusButton({
+    required String target,
+    required Color color,
+    required String current,
+    required IconData icon,
+    required String label,
+  }) {
+    final active = current == target;
+
+    return GestureDetector(
+      onTap: () => _handleStatusTap(target),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: active ? color : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: active ? color : color.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: active ? Colors.white : color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: active ? Colors.white : color,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );

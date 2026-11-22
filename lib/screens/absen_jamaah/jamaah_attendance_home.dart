@@ -223,8 +223,17 @@ class _JamaahAttendanceHomeState extends State<JamaahAttendanceHome> {
               final int absenId = _getInt(a, 'id');
               final bool isDone = a['is_done'] ?? false;
 
-              String judul = _getString(a, 'judul_absen');
-              if (judul == '-') judul = _getNestedString(a, ['kloter', 'nama']);
+              // Judul kartu adalah nama kloter, bukan nama sesi
+              String judul = _getNestedString(a, ['kloter', 'nama']);
+              if (judul == '-' || judul.isEmpty) {
+                judul = _getString(a, 'kloter_name');
+              }
+              if (judul == '-' || judul.isEmpty) {
+                judul = _getString(a, 'kloter');
+              }
+              if (judul == '-' || judul.isEmpty) {
+                judul = _getString(a, 'judul_absen');
+              }
 
               final String periode = _getString(
                 a,

@@ -27,6 +27,39 @@ class JamaahAttendanceService {
   static Future<List<dynamic>> fetchAbsenList() async {
     final client = SupabaseService.client;
 
+    // Dapatkan kloter user login saat ini untuk memfilter absensi jamaah
+    String? userKloter = await ApiService.getCurrentUserKloter();
+    if (userKloter == null || userKloter.isEmpty || userKloter == '-') {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final email = prefs.getString('email');
+        final userId = prefs.getString('user_id') ?? prefs.getString('id');
+        if (client != null &&
+            ((email != null && email.isNotEmpty) ||
+                (userId != null && userId.isNotEmpty))) {
+          final query = client.from('profiles').select('*, kloter(*)');
+          final prof = (userId != null && userId.isNotEmpty)
+              ? await query.eq('id', userId).maybeSingle()
+              : await query.eq('email', email!).maybeSingle();
+          if (prof != null) {
+            if (prof['kloter'] is Map) {
+              userKloter = (prof['kloter']['name'] ?? prof['kloter']['nama'])
+                  ?.toString();
+            } else if (prof['kloter'] != null) {
+              userKloter = prof['kloter'].toString();
+            }
+            if (userKloter != null &&
+                userKloter.isNotEmpty &&
+                userKloter != '-') {
+              await prefs.setString('kloter', userKloter.trim());
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('⚠️ [JamaahAttendanceService] Sync kloter error: $e');
+      }
+    }
+
     // 1. Coba ambil dari Supabase tabel `attendance_grup`
     if (client != null) {
       try {
@@ -45,6 +78,17 @@ class JamaahAttendanceService {
 
             final String sesi = m['sesi']?.toString() ?? 'Sesi Absensi';
             final String kloter = m['kloter']?.toString() ?? 'Kloter Umum';
+
+            // Filter: Hanya terima absensi jamaah yang sesuai dengan kloter user
+            if (userKloter != null &&
+                userKloter.isNotEmpty &&
+                userKloter != '-' &&
+                userKloter != 'ALL') {
+              if (!ApiService.isSameKloter(userKloter, kloter)) {
+                continue; // Lewati grup yang tidak sesuai kloter user
+              }
+            }
+
             final users = m['attendance_user'];
             final int total = (m['total_jamaah'] is int)
                 ? m['total_jamaah']
@@ -67,8 +111,9 @@ class JamaahAttendanceService {
 
             result.add({
               'id': id,
-              'judul_absen': sesi,
+              'judul_absen': kloter, // Judul grup absensi adalah nama kloter, bukan nama sesi
               'kloter': {'nama': kloter},
+              'kloter_name': kloter,
               'periode_kloter': m['kloter_date']?.toString() ?? 'Periode Umrah 2026',
               'tanggal_operasional': m['created_at']?.toString() ?? '',
               'sesi_lengkap': sesi,
@@ -76,7 +121,7 @@ class JamaahAttendanceService {
               'is_done': isDone,
             });
           }
-          debugPrint('✅ [JamaahAttendanceService] Loaded ${result.length} groups from Supabase');
+          debugPrint('✅ [JamaahAttendanceService] Loaded ${result.length} groups from Supabase (filtered for kloter: $userKloter)');
           return result;
         }
       } catch (e) {
@@ -122,6 +167,22 @@ class JamaahAttendanceService {
         for (final item in rawList) {
           if (item is Map) {
             final m = Map<String, dynamic>.from(item);
+
+            final String itemKloter = (m['kloter'] is Map
+                    ? (m['kloter']['nama'] ?? m['kloter']['name'])
+                    : m['kloter'])
+                ?.toString() ?? '';
+
+            if (userKloter != null &&
+                userKloter.isNotEmpty &&
+                userKloter != '-' &&
+                userKloter != 'ALL') {
+              if (itemKloter.isNotEmpty &&
+                  !ApiService.isSameKloter(userKloter, itemKloter)) {
+                continue;
+              }
+            }
+
             if (!m.containsKey('is_done')) {
               final users = m['attendance_user'] ?? m['jamaah'];
               if (users is List && users.isNotEmpty) {
@@ -136,6 +197,9 @@ class JamaahAttendanceService {
               } else {
                 m['is_done'] = false;
               }
+            }
+            if (itemKloter.isNotEmpty && itemKloter != '-') {
+              m['judul_absen'] = itemKloter;
             }
             processedList.add(m);
           }
