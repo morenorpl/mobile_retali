@@ -1275,7 +1275,11 @@ class ApiService {
   // =====================
   // SCAN KOPER (RAW)
   // =====================
-  static Future<Map<String, dynamic>> storeScanFromRaw(String qrRaw) async {
+  static Future<Map<String, dynamic>> storeScanFromRaw(
+    String qrRaw, {
+    double? latitude,
+    double? longitude,
+  }) async {
     // 1. Coba simpan ke Supabase tabel koper
     final client = SupabaseService.client;
     if (client != null) {
@@ -1484,6 +1488,8 @@ class ApiService {
               'nomor_telepon': existing['nomor_telepon'],
               'kloter': existing['kloter'],
               'scanned_by': existing['scanned_by'],
+              'latitude': existing['latitude'],
+              'longitude': existing['longitude'],
               'scanned_at': existing['created_at'],
               'created_at': existing['created_at'],
             },
@@ -1502,6 +1508,12 @@ class ApiService {
         if (noUrutan != null) {
           insertPayload['no_urutan'] = noUrutan;
         }
+        if (latitude != null) {
+          insertPayload['latitude'] = latitude;
+        }
+        if (longitude != null) {
+          insertPayload['longitude'] = longitude;
+        }
         final inserted = await client.from('koper').insert(insertPayload).select().single();
 
         return {
@@ -1517,6 +1529,8 @@ class ApiService {
             'nomor_telepon': inserted['nomor_telepon'] ?? nomorTelepon,
             'kloter': inserted['kloter'] ?? targetKloter,
             'scanned_by': inserted['scanned_by'] ?? currentUserId,
+            'latitude': inserted['latitude'] ?? latitude,
+            'longitude': inserted['longitude'] ?? longitude,
             'scanned_at': inserted['created_at'] ?? nowIso,
             'created_at': inserted['created_at'] ?? nowIso,
           },
@@ -1582,6 +1596,8 @@ class ApiService {
   // =====================
   static Future<Map<String, dynamic>> scanPassport({
     required String qrRaw,
+    double? latitude,
+    double? longitude,
   }) async {
     // 1. Coba simpan ke Supabase tabel passport_scans
     final client = SupabaseService.client;
@@ -1809,6 +1825,8 @@ class ApiService {
               'phone': existing['phone'],
               'kloter': existing['kloter'],
               'scanned_by': existing['scanned_by'],
+              'latitude': existing['latitude'],
+              'longitude': existing['longitude'],
               'scanned_at': existing['scanned_at'] ?? existing['created_at'],
               'created_at': existing['created_at'],
             },
@@ -1828,6 +1846,12 @@ class ApiService {
         if (noUrutan != null) {
           insertPayload['no_urutan'] = noUrutan;
         }
+        if (latitude != null) {
+          insertPayload['latitude'] = latitude;
+        }
+        if (longitude != null) {
+          insertPayload['longitude'] = longitude;
+        }
         final inserted = await client.from('passport_scans').insert(insertPayload).select().single();
 
         return {
@@ -1841,6 +1865,8 @@ class ApiService {
             'phone': inserted['phone'] ?? phone,
             'kloter': inserted['kloter'] ?? targetKloter,
             'scanned_by': inserted['scanned_by'] ?? currentUserId,
+            'latitude': inserted['latitude'] ?? latitude,
+            'longitude': inserted['longitude'] ?? longitude,
             'scanned_at': inserted['scanned_at'] ?? nowIso,
             'created_at': inserted['created_at'] ?? nowIso,
           },

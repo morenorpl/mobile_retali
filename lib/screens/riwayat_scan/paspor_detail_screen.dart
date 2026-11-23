@@ -9,6 +9,8 @@ class PasporDetailScreen extends StatelessWidget {
     required this.phone,
     required this.timestamp,
     required this.kloter,
+    this.latitude,
+    this.longitude,
   });
 
   final String passportNumber;
@@ -16,6 +18,8 @@ class PasporDetailScreen extends StatelessWidget {
   final String phone;
   final String timestamp;
   final String kloter;
+  final double? latitude;
+  final double? longitude;
 
   static const Color _primaryColor = Color(0xFF842D62);
   static const Color _secondaryColor = Color(0xFFA84B7C);
@@ -166,6 +170,14 @@ class PasporDetailScreen extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   _infoItem("Waktu Scan", formattedTimestamp),
+                  const SizedBox(height: 16),
+
+                  _infoItem(
+                    "Koordinat Lokasi",
+                    (latitude != null && longitude != null)
+                        ? "${latitude!.toStringAsFixed(6)}, ${longitude!.toStringAsFixed(6)}"
+                        : "-",
+                  ),
                 ],
               ),
             ),

@@ -9,6 +9,8 @@ class KoperDetailScreen extends StatelessWidget {
     required this.phone,
     required this.timestamp,
     required this.kloter,
+    this.latitude,
+    this.longitude,
   });
 
   final String kode;
@@ -16,6 +18,8 @@ class KoperDetailScreen extends StatelessWidget {
   final String phone;
   final String timestamp;
   final String kloter;
+  final double? latitude;
+  final double? longitude;
 
   // 🎨 Warna disamakan dengan tema utama (Home)
   static const Color _primaryColor = Color(0xFF842D62);
@@ -180,6 +184,14 @@ class KoperDetailScreen extends StatelessWidget {
                     label: 'Waktu Scan',
                     value: formattedTimestamp,
                     isTimestamp: true,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildInfoItem(
+                    icon: Icons.location_on_rounded,
+                    label: 'Koordinat Lokasi',
+                    value: (latitude != null && longitude != null)
+                        ? '${latitude!.toStringAsFixed(6)}, ${longitude!.toStringAsFixed(6)}'
+                        : 'Tidak tercatat',
                   ),
                 ],
               ),

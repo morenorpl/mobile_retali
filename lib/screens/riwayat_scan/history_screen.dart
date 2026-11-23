@@ -289,6 +289,12 @@ class HistoryScreenState extends State<HistoryScreen> {
                       final phone = scan['owner_phone'] ?? scan['phone'] ?? scan['nomor_telepon'] ?? '-';
                       final kloter = scan['kloter'] ?? '-';
                       final waktu = scan['scanned_at'] ?? scan['created_at'] ?? '';
+                      final lat = (scan['latitude'] != null)
+                          ? double.tryParse(scan['latitude'].toString())
+                          : null;
+                      final lng = (scan['longitude'] != null)
+                          ? double.tryParse(scan['longitude'].toString())
+                          : null;
 
                       return _ModernCard(
                         type: _type,
@@ -296,6 +302,8 @@ class HistoryScreenState extends State<HistoryScreen> {
                         nama: nama.toString(),
                         kloter: kloter.toString(),
                         waktu: waktu.toString(),
+                        latitude: lat,
+                        longitude: lng,
                         formatDateTime: _formatDateTime,
                         onDelete: () => _deleteItem(scan),
                         onDetail: () {
@@ -309,6 +317,8 @@ class HistoryScreenState extends State<HistoryScreen> {
                                   phone: phone.toString(),
                                   timestamp: waktu.toString(),
                                   kloter: kloter.toString(),
+                                  latitude: lat,
+                                  longitude: lng,
                                 ),
                               ),
                             );
@@ -322,6 +332,8 @@ class HistoryScreenState extends State<HistoryScreen> {
                                   phone: phone.toString(),
                                   timestamp: waktu.toString(),
                                   kloter: kloter.toString(),
+                                  latitude: lat,
+                                  longitude: lng,
                                 ),
                               ),
                             );
@@ -382,6 +394,8 @@ class _ModernCard extends StatelessWidget {
   final String nama;
   final String kloter;
   final String waktu;
+  final double? latitude;
+  final double? longitude;
   final VoidCallback onDetail;
   final VoidCallback onDelete;
   final String Function(String) formatDateTime;
@@ -392,6 +406,8 @@ class _ModernCard extends StatelessWidget {
     required this.nama,
     required this.kloter,
     required this.waktu,
+    this.latitude,
+    this.longitude,
     required this.onDetail,
     required this.onDelete,
     required this.formatDateTime,
@@ -468,26 +484,75 @@ class _ModernCard extends StatelessWidget {
             style: const TextStyle(
                 color: Colors.white60),
           ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.25),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: (latitude != null && longitude != null)
+                    ? Colors.greenAccent.withOpacity(0.4)
+                    : Colors.white12,
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.location_on_rounded,
+                  size: 18,
+                  color: (latitude != null && longitude != null)
+                      ? Colors.greenAccent
+                      : Colors.white38,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Koordinat Lokasi:",
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        (latitude != null && longitude != null)
+                            ? "${latitude!.toStringAsFixed(6)}, ${longitude!.toStringAsFixed(6)}"
+                            : "Belum tercatat",
+                        style: TextStyle(
+                          color: (latitude != null && longitude != null)
+                              ? Colors.greenAccent
+                              : Colors.white38,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 14),
           Align(
-            alignment:
-                Alignment.centerRight,
+            alignment: Alignment.centerRight,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    Colors.white,
-                foregroundColor:
-                    Colors.black,
-                shape:
-                    RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius
-                          .circular(12),
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
               onPressed: onDetail,
-              child:
-                  const Text("Detail"),
+              child: const Text("Detail"),
             ),
           )
         ],

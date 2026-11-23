@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:geolocator/geolocator.dart';
 
 import 'package:mobile_retali/helpers/permission_helper.dart';
 import 'package:mobile_retali/services/scan_service.dart';
@@ -24,6 +25,10 @@ class _ScanScreenState extends State<ScanScreen> {
   String? _statusMessage;
   Color _statusColor = Colors.transparent;
 
+  Position? _currentPosition;
+  bool _isLoadingLocation = false;
+  String? _locationStatusText;
+
   late final MobileScannerController _cameraController;
   late final AudioPlayer _playerOk;
   late final ScanService _scanService;
@@ -44,6 +49,109 @@ class _ScanScreenState extends State<ScanScreen> {
       ..setVolume(1.0);
 
     _scanService = ScanService();
+
+    // Otomatis deteksi koordinat lokasi saat layar dibuka tanpa perlu input pengguna
+    _initLocation();
+  }
+
+  Future<void> _initLocation() async {
+    try {
+      if (mounted) {
+        setState(() {
+          _isLoadingLocation = true;
+          _locationStatusText = "Mencari lokasi GPS...";
+        });
+      }
+
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          setState(() {
+            _isLoadingLocation = false;
+            _locationStatusText = "GPS nonaktif (aktifkan GPS HP)";
+          });
+        }
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            setState(() {
+              _isLoadingLocation = false;
+              _locationStatusText = "Izin lokasi ditolak";
+            });
+          }
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          setState(() {
+            _isLoadingLocation = false;
+            _locationStatusText = "Izin lokasi ditolak permanen";
+          });
+        }
+        return;
+      }
+
+      // Ambil lokasi cepat terakhir yang diketahui
+      final lastPos = await Geolocator.getLastKnownPosition();
+      if (lastPos != null && mounted) {
+        setState(() {
+          _currentPosition = lastPos;
+          _locationStatusText = "${lastPos.latitude.toStringAsFixed(4)}, ${lastPos.longitude.toStringAsFixed(4)}";
+        });
+      }
+
+      // Ambil koordinat akurat terbaru
+      final currentPos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 4),
+      );
+
+      if (mounted) {
+        setState(() {
+          _currentPosition = currentPos;
+          _isLoadingLocation = false;
+          _locationStatusText = "${currentPos.latitude.toStringAsFixed(4)}, ${currentPos.longitude.toStringAsFixed(4)}";
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingLocation = false;
+          if (_currentPosition == null) {
+            _locationStatusText = "GPS siap otomatis saat scan";
+          }
+        });
+      }
+    }
+  }
+
+  Future<Position?> _getCoordinates() async {
+    if (_currentPosition != null) {
+      return _currentPosition;
+    }
+    try {
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 2),
+      );
+      _currentPosition = pos;
+      return pos;
+    } catch (_) {
+      try {
+        final last = await Geolocator.getLastKnownPosition();
+        if (last != null) _currentPosition = last;
+        return last;
+      } catch (_) {
+        return null;
+      }
+    }
   }
 
   @override
@@ -165,13 +273,21 @@ class _ScanScreenState extends State<ScanScreen> {
 
   Future<void> _handleScanKoper(String raw) async {
     try {
-      final result = await _scanService.scanKoper(qrRaw: raw);
+      final pos = await _getCoordinates();
+      final result = await _scanService.scanKoper(
+        qrRaw: raw,
+        latitude: pos?.latitude,
+        longitude: pos?.longitude,
+      );
       if (result.success) {
         await _playSuccess();
         final display = result.ownerName != null && result.ownerName != '-'
             ? "${result.code} - ${result.ownerName}"
             : result.code;
-        _showStatus("✅ SCAN KOPER BERHASIL\n$display", Colors.green);
+        final locInfo = (pos != null)
+            ? "\n📍 ${pos.latitude.toStringAsFixed(5)}, ${pos.longitude.toStringAsFixed(5)}"
+            : "";
+        _showStatus("✅ SCAN KOPER BERHASIL\n$display$locInfo", Colors.green);
       } else {
         final msg = result.message ?? 'Koper sudah pernah discan';
         _showStatus("⚠️ $msg\n(${result.code})", Colors.orange);
@@ -184,13 +300,21 @@ class _ScanScreenState extends State<ScanScreen> {
 
   Future<void> _handleScanPaspor(String raw) async {
     try {
-      final result = await _scanService.scanPassport(qrRaw: raw);
+      final pos = await _getCoordinates();
+      final result = await _scanService.scanPassport(
+        qrRaw: raw,
+        latitude: pos?.latitude,
+        longitude: pos?.longitude,
+      );
       if (result.success) {
         await _playSuccess();
         final display = result.ownerName != null && result.ownerName != '-'
             ? "${result.code} - ${result.ownerName}"
             : result.code;
-        _showStatus("✅ SCAN PASPOR BERHASIL\n$display", Colors.green);
+        final locInfo = (pos != null)
+            ? "\n📍 ${pos.latitude.toStringAsFixed(5)}, ${pos.longitude.toStringAsFixed(5)}"
+            : "";
+        _showStatus("✅ SCAN PASPOR BERHASIL\n$display$locInfo", Colors.green);
       } else {
         final msg = result.message ?? 'Paspor sudah pernah discan';
         _showStatus("⚠️ $msg\n(${result.code})", Colors.orange);
@@ -342,6 +466,46 @@ class _ScanScreenState extends State<ScanScreen> {
                         ),
                       ],
                     ),
+
+                    // Badge status deteksi koordinat otomatis (Real-time GPS tanpa input manual)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.65),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: _currentPosition != null
+                              ? Colors.greenAccent.withOpacity(0.7)
+                              : Colors.amberAccent.withOpacity(0.5),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.my_location,
+                            size: 13,
+                            color: _currentPosition != null
+                                ? Colors.greenAccent
+                                : (_isLoadingLocation ? Colors.amberAccent : Colors.white70),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _currentPosition != null
+                                ? "📍 GPS: ${_currentPosition!.latitude.toStringAsFixed(5)}, ${_currentPosition!.longitude.toStringAsFixed(5)}"
+                                : (_locationStatusText ?? "Mendeteksi koordinat..."),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                     if (_statusMessage != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 10),

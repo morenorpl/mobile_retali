@@ -3,14 +3,18 @@ import 'api_service.dart';
 
 class ScanService {
   // ===============================
-  // SCAN PASPOR (FINAL – TANPA STATUS)
+  // SCAN PASPOR (FINAL – DENGAN KOORDINAT OTOMATIS)
   // ===============================
   Future<ScanResult> scanPassport({
     required String qrRaw,
+    double? latitude,
+    double? longitude,
   }) async {
     final Map<String, dynamic> res =
         await ApiService.scanPassport(
           qrRaw: qrRaw,
+          latitude: latitude,
+          longitude: longitude,
         );
 
     // ===============================
@@ -51,13 +55,19 @@ class ScanService {
   }
 
   // ===============================
-  // SCAN KOPER
+  // SCAN KOPER (FINAL – DENGAN KOORDINAT OTOMATIS)
   // ===============================
   Future<ScanResult> scanKoper({
     required String qrRaw,
+    double? latitude,
+    double? longitude,
   }) async {
     final Map<String, dynamic> res =
-        await ApiService.storeScanFromRaw(qrRaw);
+        await ApiService.storeScanFromRaw(
+          qrRaw,
+          latitude: latitude,
+          longitude: longitude,
+        );
 
     // ===============================
     // SUCCESS

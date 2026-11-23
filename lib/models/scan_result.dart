@@ -7,6 +7,9 @@ class ScanResult {
   final String? ownerPhone;
   final String? kloter;
 
+  final double? latitude;
+  final double? longitude;
+
   final DateTime? scannedAt;
   final String? scannedBy;
   final String? message;
@@ -18,6 +21,8 @@ class ScanResult {
     this.ownerName,
     this.ownerPhone,
     this.kloter,
+    this.latitude,
+    this.longitude,
     this.scannedAt,
     this.scannedBy,
     this.message,
@@ -28,6 +33,13 @@ class ScanResult {
   // ===============================
   factory ScanResult.success(Map<String, dynamic> data) {
     final rawTime = data['scanned_at'] ?? data['created_at'];
+    final lat = (data['latitude'] != null)
+        ? double.tryParse(data['latitude'].toString())
+        : null;
+    final lng = (data['longitude'] != null)
+        ? double.tryParse(data['longitude'].toString())
+        : null;
+
     return ScanResult(
       success: true,
       duplicate: false,
@@ -41,6 +53,8 @@ class ScanResult {
           data['phone'] ??
           data['nomor_telepon'],
       kloter: data['kloter']?.toString(),
+      latitude: lat,
+      longitude: lng,
       scannedAt: rawTime != null
           ? DateTime.tryParse(rawTime.toString())
           : DateTime.now(),
@@ -58,6 +72,13 @@ class ScanResult {
     String? message,
   ) {
     final rawTime = data['scanned_at'] ?? data['created_at'];
+    final lat = (data['latitude'] != null)
+        ? double.tryParse(data['latitude'].toString())
+        : null;
+    final lng = (data['longitude'] != null)
+        ? double.tryParse(data['longitude'].toString())
+        : null;
+
     return ScanResult(
       success: false,
       duplicate: true,
@@ -73,6 +94,8 @@ class ScanResult {
           data['phone'] ??
           data['nomor_telepon'],
       kloter: data['kloter']?.toString(),
+      latitude: lat,
+      longitude: lng,
       scannedAt: rawTime != null
           ? DateTime.tryParse(rawTime.toString())
           : null,
