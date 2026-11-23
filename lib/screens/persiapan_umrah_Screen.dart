@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'persiapan_diniyah_screen.dart';
 import 'persiapan_teknis_screen.dart';
 
@@ -14,7 +14,7 @@ class PersiapanUmrahScreen extends StatelessWidget {
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF5C1C3B), Color(0xFF842D62)],
+              colors: [Color(0xFF0D1523), Color(0xFF1B3167)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -23,7 +23,8 @@ class PersiapanUmrahScreen extends StatelessWidget {
         title: const Text(
           "Persiapan Umrah",
           style: TextStyle(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
+            fontSize: 19,
             color: Colors.white,
             letterSpacing: 0.5,
           ),
@@ -91,12 +92,12 @@ class PersiapanUmrahScreen extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        splashColor: const Color(0xFF842D62).withOpacity(0.3),
+        splashColor: const Color(0xFF1B3167).withOpacity(0.3),
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF842D62), Color(0xFF5C1C3B)],
+              colors: [Color(0xFF1B3167), Color(0xFF0D1523)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -128,8 +129,8 @@ class PersiapanUmrahScreen extends StatelessWidget {
               Text(
                 title,
                 style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16.5,
                   color: Colors.white,
                   letterSpacing: 0.3,
                 ),

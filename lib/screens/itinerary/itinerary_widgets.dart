@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const brand = Color(0xFF7A3456);
+  static const brand = Color(0xFF1B3167);
   static const _shadow = Color(0x14000000);
 
   static TextStyle get title =>

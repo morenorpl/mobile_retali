@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:mobile_retali/services/quran_service.dart';
 
 class QuranDetailScreen extends StatefulWidget {
@@ -39,7 +39,7 @@ class _QuranDetailScreenState extends State<QuranDetailScreen> {
     final s = _surah;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF842D62),
+        backgroundColor: const Color(0xFF1B3167),
         // === TAMBAHKAN INI UNTUK WARNA PUTIH ===
         foregroundColor: Colors.white, // Warna untuk icon dan teks
         titleTextStyle: const TextStyle(
@@ -66,7 +66,7 @@ class _QuranDetailScreenState extends State<QuranDetailScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF842D62).withOpacity(.07),
+                          color: const Color(0xFF1B3167).withOpacity(.07),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
@@ -117,12 +117,12 @@ class _QuranDetailScreenState extends State<QuranDetailScreen> {
                                   CircleAvatar(
                                     radius: 16,
                                     backgroundColor:
-                                        const Color(0xFF842D62).withOpacity(.1),
+                                        const Color(0xFF1B3167).withOpacity(.1),
                                     child: Text(
                                       '$no',
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF842D62),
+                                        color: Color(0xFF1B3167),
                                       ),
                                     ),
                                   ),

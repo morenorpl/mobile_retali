@@ -1,4 +1,4 @@
-import 'dart:io' show File;
+﻿import 'dart:io' show File;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -198,7 +198,7 @@ class _AbsensiFormScreenState extends State<AbsensiFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F5F8),
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text(
           'Isi Absensi Petugas',
@@ -208,7 +208,7 @@ class _AbsensiFormScreenState extends State<AbsensiFormScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: const Color(0xFF842D62),
+        backgroundColor: const Color(0xFF1B3167),
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -252,7 +252,7 @@ class _AbsensiFormScreenState extends State<AbsensiFormScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF5C1C3B), Color(0xFF842D62)],
+                  colors: [Color(0xFF0D1523), Color(0xFF1B3167)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -352,7 +352,7 @@ class _AbsensiFormScreenState extends State<AbsensiFormScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8F5F8),
+                          color: const Color(0xFFF1F5F9),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: Colors.grey.shade300),
                         ),
@@ -360,7 +360,7 @@ class _AbsensiFormScreenState extends State<AbsensiFormScreen> {
                           child: DropdownButton<String>(
                             isExpanded: true,
                             value: _selectedBagian,
-                            icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF842D62)),
+                            icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF1B3167)),
                             items: widget.sesi.bagianSesi.map((b) {
                               return DropdownMenuItem<String>(
                                 value: b.namaBagian,
@@ -431,7 +431,7 @@ class _AbsensiFormScreenState extends State<AbsensiFormScreen> {
                   children: [
                     const Row(
                       children: [
-                        Icon(Icons.camera_alt_rounded, color: Color(0xFF842D62), size: 20),
+                        Icon(Icons.camera_alt_rounded, color: Color(0xFF1B3167), size: 20),
                         SizedBox(width: 8),
                         Text(
                           'Foto Bukti Kehadiran',
@@ -450,11 +450,11 @@ class _AbsensiFormScreenState extends State<AbsensiFormScreen> {
                         height: 200,
                         width: double.infinity,
                         decoration: BoxDecoration(
-                          color: _pickedFile == null ? const Color(0xFFF8F4F7) : Colors.transparent,
+                          color: _pickedFile == null ? const Color(0xFFF8FAFC) : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: _pickedFile == null
-                                ? const Color(0xFF842D62).withOpacity(0.3)
+                                ? const Color(0xFF1B3167).withOpacity(0.3)
                                 : Colors.transparent,
                             width: 2,
                           ),
@@ -467,13 +467,13 @@ class _AbsensiFormScreenState extends State<AbsensiFormScreen> {
                                     width: 56,
                                     height: 56,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF842D62).withOpacity(0.1),
+                                      color: const Color(0xFF1B3167).withOpacity(0.1),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(
                                       Icons.add_a_photo_rounded,
                                       size: 28,
-                                      color: Color(0xFF842D62),
+                                      color: Color(0xFF1B3167),
                                     ),
                                   ),
                                   const SizedBox(height: 10),
@@ -557,7 +557,7 @@ class _AbsensiFormScreenState extends State<AbsensiFormScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.location_on_rounded, color: Color(0xFF842D62), size: 20),
+                        const Icon(Icons.location_on_rounded, color: Color(0xFF1B3167), size: 20),
                         const SizedBox(width: 8),
                         const Text(
                           'Koordinat GPS Lokasi',
@@ -575,7 +575,7 @@ class _AbsensiFormScreenState extends State<AbsensiFormScreen> {
                             padding: const EdgeInsets.all(4),
                             child: Icon(
                               Icons.refresh_rounded,
-                              color: const Color(0xFF842D62),
+                              color: const Color(0xFF1B3167),
                               size: 20,
                             ),
                           ),
@@ -591,7 +591,7 @@ class _AbsensiFormScreenState extends State<AbsensiFormScreen> {
                             height: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: const Color(0xFF842D62),
+                              color: const Color(0xFF1B3167),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -649,7 +649,7 @@ class _AbsensiFormScreenState extends State<AbsensiFormScreen> {
               onPressed: (_loading || !widget.sesi.isSudahMasukWaktu) ? null : _submit,
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.sesi.isSudahMasukWaktu
-                    ? const Color(0xFF842D62)
+                    ? const Color(0xFF1B3167)
                     : Colors.grey.shade300,
                 disabledBackgroundColor: Colors.grey.shade300,
                 disabledForegroundColor: Colors.grey.shade500,
@@ -699,10 +699,10 @@ class _AbsensiFormScreenState extends State<AbsensiFormScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF842D62) : const Color(0xFFF4EFF3),
+            color: isSelected ? const Color(0xFF1B3167) : const Color(0xFFF1F5F9),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: isSelected ? const Color(0xFF842D62) : Colors.transparent,
+              color: isSelected ? const Color(0xFF1B3167) : Colors.transparent,
             ),
           ),
           child: Column(

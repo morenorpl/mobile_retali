@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'destinasi.dart';
 import 'maps_helper.dart';
 
@@ -44,7 +44,7 @@ class _DestinasiZiarahPageState extends State<DestinasiZiarahPage>
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: const Color(0xFF842D62),
+        backgroundColor: const Color(0xFF1B3167),
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
@@ -76,8 +76,8 @@ class _DestinasiZiarahPageState extends State<DestinasiZiarahPage>
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Color(0xFFF8F4F7),
-                Color(0xFFF0E8EF),
+                Color(0xFFF8FAFC),
+                Color(0xFFEEF2F6),
               ],
             ),
           ),
@@ -107,7 +107,7 @@ class _DestinasiZiarahPageState extends State<DestinasiZiarahPage>
                         hintStyle: TextStyle(color: Colors.grey[600]),
                         prefixIcon: Icon(
                           Icons.search,
-                          color: const Color(0xFF842D62).withOpacity(0.7),
+                          color: const Color(0xFF1B3167).withOpacity(0.7),
                         ),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
@@ -128,7 +128,7 @@ class _DestinasiZiarahPageState extends State<DestinasiZiarahPage>
                       children: [
                         Icon(
                           Icons.place_outlined,
-                          color: const Color(0xFF842D62).withOpacity(0.7),
+                          color: const Color(0xFF1B3167).withOpacity(0.7),
                           size: 16,
                         ),
                         const SizedBox(width: 6),
@@ -140,7 +140,7 @@ class _DestinasiZiarahPageState extends State<DestinasiZiarahPage>
                             return Text(
                               '${currentItems.length} destinasi ditemukan',
                               style: TextStyle(
-                                color: const Color(0xFF842D62).withOpacity(0.8),
+                                color: const Color(0xFF1B3167).withOpacity(0.8),
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -226,27 +226,9 @@ class _GridDestinasiResponsive extends StatelessWidget {
       );
     }
 
-    // Tentukan childAspectRatio berdasarkan lebar layar
-    double aspectRatio;
-    if (screenWidth < 360) {
-      aspectRatio = 0.9;
-    } else if (screenWidth < 400) {
-      aspectRatio = 1.1;
-    } else if (screenWidth < 500) {
-      aspectRatio = 1.2;
-    } else {
-      aspectRatio = 1.4;
-    }
-
-    // Tentukan jumlah kolom berdasarkan ukuran layar
-    int crossAxisCount;
-    if (screenWidth < 400) {
-      crossAxisCount = 2;
-    } else if (screenWidth < 800) {
-      crossAxisCount = 3;
-    } else {
-      crossAxisCount = 4;
-    }
+    // Tentukan jumlah kolom dan aspect ratio yang aman agar tidak overflow
+    final int crossAxisCount = screenWidth > 600 ? 3 : 2;
+    final double aspectRatio = screenWidth > 600 ? 0.95 : 0.82;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -256,74 +238,112 @@ class _GridDestinasiResponsive extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
+          crossAxisSpacing: 14,
+          mainAxisSpacing: 14,
           childAspectRatio: aspectRatio,
         ),
         itemBuilder: (_, i) {
           final d = items[i];
-          return GestureDetector(
-            onTap: () => openMapsTo(d.lat, d.lng, label: d.nama),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => openMapsTo(d.lat, d.lng, label: d.nama),
+              borderRadius: BorderRadius.circular(18),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  color: Colors.white,
+                  border: Border.all(
+                    color: const Color(0xFFE2E8F0),
+                    width: 1.0,
                   ),
-                ],
-              ),
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF842D62).withOpacity(0.1),
-                      shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF1B3167).withValues(alpha: 0.06),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
                     ),
-                    child: const Icon(
-                      Icons.place_rounded,
-                      color: Color(0xFF842D62),
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    d.nama,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF333333),
-                      height: 1.3,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF842D62).withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      city,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF842D62).withOpacity(0.8),
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFF1B3167),
+                            Color(0xFF0D1523),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF1B3167).withValues(alpha: 0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.place_rounded,
+                        color: Color(0xFFEAB308),
+                        size: 24,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    Text(
+                      d.nama,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F172A),
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1B3167).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFF1B3167).withValues(alpha: 0.15),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.navigation_rounded,
+                            size: 11,
+                            color: Color(0xFF1B3167),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            city,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1B3167),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );

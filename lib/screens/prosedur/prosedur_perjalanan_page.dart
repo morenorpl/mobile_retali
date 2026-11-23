@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -77,7 +77,7 @@ class _ProsedurPerjalananPageState extends State<ProsedurPerjalananPage>
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: const Color(0xFF842D62),
+        backgroundColor: const Color(0xFF1B3167),
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
@@ -106,8 +106,8 @@ class _ProsedurPerjalananPageState extends State<ProsedurPerjalananPage>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFF8F4F7),
-              Color(0xFFF0E8EF),
+              Color(0xFFF8FAFC),
+              Color(0xFFEEF2F6),
             ],
           ),
         ),
@@ -134,7 +134,7 @@ class _ProsedurPerjalananPageState extends State<ProsedurPerjalananPage>
                     hintStyle: TextStyle(color: Colors.grey[600]),
                     prefixIcon: Icon(
                       Icons.search,
-                      color: const Color(0xFF842D62).withOpacity(0.7),
+                      color: const Color(0xFF1B3167).withOpacity(0.7),
                     ),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(
@@ -275,7 +275,7 @@ class _SectionView extends StatelessWidget {
                           // Bookmark Button
                           Container(
                             decoration: BoxDecoration(
-                              color: isFav ? const Color(0xFF842D62) : Colors.grey.withOpacity(0.1),
+                              color: isFav ? const Color(0xFF1B3167) : Colors.grey.withOpacity(0.1),
                               shape: BoxShape.circle,
                             ),
                             child: IconButton(
@@ -360,7 +360,7 @@ class _Bullet extends StatelessWidget {
             width: 6,
             height: 6,
             decoration: const BoxDecoration(
-              color: Color(0xFF842D62),
+              color: Color(0xFF1B3167),
               shape: BoxShape.circle,
             ),
           ),
@@ -423,7 +423,7 @@ class _ChecklistView extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF842D62),
+                      color: const Color(0xFF1B3167),
                     ),
                   ),
                   Text(
@@ -431,7 +431,7 @@ class _ChecklistView extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF842D62),
+                      color: Color(0xFF1B3167),
                     ),
                   ),
                 ],
@@ -440,7 +440,7 @@ class _ChecklistView extends StatelessWidget {
               LinearProgressIndicator(
                 value: totalCount > 0 ? completedCount / totalCount : 0,
                 backgroundColor: Colors.grey[200],
-                color: const Color(0xFF842D62),
+                color: const Color(0xFF1B3167),
                 borderRadius: BorderRadius.circular(10),
                 minHeight: 8,
               ),
@@ -520,13 +520,13 @@ class _ChecklistView extends StatelessWidget {
                             borderRadius: BorderRadius.circular(14),
                           ),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          activeColor: const Color(0xFF842D62),
+                          activeColor: const Color(0xFF1B3167),
                           checkColor: Colors.white,
                           tileColor: Colors.white,
                           secondary: done
                               ? Icon(
                                   Icons.check_circle_rounded,
-                                  color: const Color(0xFF842D62),
+                                  color: const Color(0xFF1B3167),
                                 )
                               : Icon(
                                   Icons.radio_button_unchecked_rounded,

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class PasporDetailScreen extends StatelessWidget {
@@ -21,9 +21,9 @@ class PasporDetailScreen extends StatelessWidget {
   final double? latitude;
   final double? longitude;
 
-  static const Color _primaryColor = Color(0xFF842D62);
-  static const Color _secondaryColor = Color(0xFFA84B7C);
-  static const Color _pageBg = Color(0xFFFDF8FB);
+  static const Color _primaryColor = Color(0xFF1B3167);
+  static const Color _secondaryColor = Color(0xFF263754);
+  static const Color _pageBg = Color(0xFFF8FAFC);
   static const Color _cardBg = Colors.white;
 
   String _formatTimestamp(String raw) {

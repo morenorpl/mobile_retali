@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../services/jamaah_attendance_service.dart';
 import '../../models/absensi_jamaah_detail.dart';
 import 'dart:convert';
@@ -242,7 +242,7 @@ class _JamaahAttendancePageState extends State<JamaahAttendancePage> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        backgroundColor: const Color(0xFF842D62),
+        backgroundColor: const Color(0xFF1B3167),
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
         centerTitle: false,
@@ -527,7 +527,7 @@ class _JamaahAttendancePageState extends State<JamaahAttendancePage> {
         });
       },
       backgroundColor: Colors.grey[100],
-      selectedColor: const Color(0xFF842D62),
+      selectedColor: const Color(0xFF1B3167),
       checkmarkColor: Colors.white,
       shape: const StadiumBorder(),
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -613,7 +613,7 @@ Future<void> _loadDraft() async {
           child: ElevatedButton(
             onPressed: isAllCompleted ? _submitAll : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF842D62),
+              backgroundColor: const Color(0xFF1B3167),
               foregroundColor: Colors.white,
               disabledBackgroundColor: Colors.grey[300],
               disabledForegroundColor: Colors.grey[600],

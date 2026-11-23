@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -55,7 +55,7 @@ class _InfoPraktisPageState extends State<InfoPraktisPage>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Info Praktis'),
-        backgroundColor: const Color(0xFF842D62),
+        backgroundColor: const Color(0xFF1B3167),
         // === TAMBAHKAN INI UNTUK WARNA PUTIH ===
         foregroundColor: Colors.white, // Warna untuk icon dan teks
         titleTextStyle: const TextStyle(
@@ -164,7 +164,7 @@ class _SectionView extends StatelessWidget {
                       onPressed: () => onToggleFav(key),
                       icon: Icon(
                         isFav ? Icons.bookmark : Icons.bookmark_outline,
-                        color: isFav ? const Color(0xFF842D62) : Colors.grey,
+                        color: isFav ? const Color(0xFF1B3167) : Colors.grey,
                       ),
                     ),
                     IconButton(
@@ -199,7 +199,7 @@ class _SectionView extends StatelessWidget {
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF7F1F5),
+                      color: const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     padding: const EdgeInsets.all(10),

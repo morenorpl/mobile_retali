@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Warna default material design purple -->
-    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_500">#FF1B3167</color>
     
-    <!-- Warna utama aplikasi (maroon) -->
-    <color name="primary">#FF5C1C3B</color>
-    <color name="primary_dark">#FF3A1026</color>
-    <color name="accent">#FFFF4081</color>
+    <!-- Warna utama aplikasi (retali-sistem navy & gold) -->
+    <color name="primary">#FF0D1523</color>
+    <color name="primary_dark">#FF0A0F1D</color>
+    <color name="accent">#FFEAB308</color>
     
     <!-- Warna untuk notifikasi -->
-    <color name="notification_color">#FF5C1C3B</color>
+    <color name="notification_color">#FF1B3167</color>
 </resources>

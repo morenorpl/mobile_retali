@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'doa_model.dart';
@@ -78,7 +78,7 @@ class _DzikirDoaPageState extends State<DzikirDoaPage> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: const Color(0xFF842D62),
+        backgroundColor: const Color(0xFF1B3167),
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
@@ -89,8 +89,8 @@ class _DzikirDoaPageState extends State<DzikirDoaPage> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFF8F4F7),
-              Color(0xFFF0E8EF),
+              Color(0xFFF8FAFC),
+              Color(0xFFEEF2F6),
             ],
           ),
         ),
@@ -116,7 +116,7 @@ class _DzikirDoaPageState extends State<DzikirDoaPage> {
                   hintStyle: TextStyle(color: Colors.grey[600]),
                   prefixIcon: Icon(
                     Icons.search,
-                    color: const Color(0xFF842D62).withOpacity(0.7),
+                    color: const Color(0xFF1B3167).withOpacity(0.7),
                   ),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(
@@ -148,13 +148,13 @@ class _DzikirDoaPageState extends State<DzikirDoaPage> {
                     ),
                     selected: active,
                     onSelected: (_) => setState(() => _selected = k),
-                    selectedColor: const Color(0xFF842D62),
+                    selectedColor: const Color(0xFF1B3167),
                     backgroundColor: Colors.white,
                     checkmarkColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
-                        color: active ? const Color(0xFF842D62) : Colors.grey.shade300,
+                        color: active ? const Color(0xFF1B3167) : Colors.grey.shade300,
                         width: 1,
                       ),
                     ),
@@ -175,14 +175,14 @@ class _DzikirDoaPageState extends State<DzikirDoaPage> {
                   children: [
                     Icon(
                       Icons.menu_book_outlined,
-                      color: const Color(0xFF842D62).withOpacity(0.7),
+                      color: const Color(0xFF1B3167).withOpacity(0.7),
                       size: 16,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       '${items.length} doa/dzikir ditemukan',
                       style: TextStyle(
-                        color: const Color(0xFF842D62).withOpacity(0.8),
+                        color: const Color(0xFF1B3167).withOpacity(0.8),
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -193,14 +193,14 @@ class _DzikirDoaPageState extends State<DzikirDoaPage> {
                         children: [
                           Icon(
                             Icons.bookmark,
-                            color: const Color(0xFF842D62).withOpacity(0.7),
+                            color: const Color(0xFF1B3167).withOpacity(0.7),
                             size: 14,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '${_favorit.length} favorit',
                             style: TextStyle(
-                              color: const Color(0xFF842D62).withOpacity(0.8),
+                              color: const Color(0xFF1B3167).withOpacity(0.8),
                               fontSize: 12,
                             ),
                           ),
@@ -321,7 +321,7 @@ class _DoaCard extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF842D62).withOpacity(0.1),
+                            color: const Color(0xFF1B3167).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -329,7 +329,7 @@ class _DoaCard extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF842D62),
+                              color: Color(0xFF1B3167),
                             ),
                           ),
                         ),
@@ -343,7 +343,7 @@ class _DoaCard extends StatelessWidget {
                       // Bookmark Button
                       Container(
                         decoration: BoxDecoration(
-                          color: isFav ? const Color(0xFF842D62) : Colors.grey.withOpacity(0.1),
+                          color: isFav ? const Color(0xFF1B3167) : Colors.grey.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
@@ -402,10 +402,10 @@ class _DoaCard extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8F4F7),
+                  color: const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: const Color(0xFF842D62).withOpacity(0.1),
+                    color: const Color(0xFF1B3167).withOpacity(0.1),
                     width: 1,
                   ),
                 ),
@@ -439,10 +439,10 @@ class _DoaCard extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF842D62).withOpacity(0.05),
+                  color: const Color(0xFF1B3167).withOpacity(0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: const Color(0xFF842D62).withOpacity(0.1),
+                    color: const Color(0xFF1B3167).withOpacity(0.1),
                   ),
                 ),
                 child: Column(
@@ -453,7 +453,7 @@ class _DoaCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF842D62).withOpacity(0.8),
+                        color: const Color(0xFF1B3167).withOpacity(0.8),
                       ),
                     ),
                     const SizedBox(height: 6),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -62,7 +62,7 @@ class _FiqihUmrahPageState extends State<FiqihUmrahPage>
             fontSize: 20,
           ),
         ),
-        backgroundColor: const Color(0xFF842D62),
+        backgroundColor: const Color(0xFF1B3167),
         iconTheme: const IconThemeData(color: Colors.white),
         bottom: TabBar(
           controller: _tab,
@@ -89,8 +89,8 @@ class _FiqihUmrahPageState extends State<FiqihUmrahPage>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFF8F4F7),
-              Color(0xFFF0E8EF),
+              Color(0xFFF8FAFC),
+              Color(0xFFEEF2F6),
             ],
           ),
         ),
@@ -115,7 +115,7 @@ class _FiqihUmrahPageState extends State<FiqihUmrahPage>
                   hintText: 'Cari materi fiqih…',
                   prefixIcon: const Icon(
                     Icons.search,
-                    color: Color(0xFF842D62),
+                    color: Color(0xFF1B3167),
                   ),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(
@@ -237,7 +237,7 @@ class _SectionView extends StatelessWidget {
                           // Bookmark Button
                           Container(
                             decoration: BoxDecoration(
-                              color: isFav ? const Color(0xFF842D62) : Colors.grey.withOpacity(0.1),
+                              color: isFav ? const Color(0xFF1B3167) : Colors.grey.withOpacity(0.1),
                               shape: BoxShape.circle,
                             ),
                             child: IconButton(
@@ -314,7 +314,7 @@ class _SectionView extends StatelessWidget {
                       ),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8F4F7),
+                          color: const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: ExpansionTile(
@@ -324,13 +324,13 @@ class _SectionView extends StatelessWidget {
                             'Dalil & Catatan',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF842D62),
+                              color: Color(0xFF1B3167),
                               fontSize: 15,
                             ),
                           ),
                           trailing: const Icon(
                             Icons.expand_more,
-                            color: Color(0xFF842D62),
+                            color: Color(0xFF1B3167),
                           ),
                           children: [
                             if (e.dalil.isNotEmpty)
@@ -369,7 +369,7 @@ class _Bullet extends StatelessWidget {
           const Text(
             '•  ',
             style: TextStyle(
-              color: Color(0xFF842D62),
+              color: Color(0xFF1B3167),
               height: 1.5,
               fontSize: 16,
             ),

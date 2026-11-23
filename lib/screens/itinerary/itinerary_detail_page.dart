@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:mobile_retali/services/itinerary_service.dart';
 import 'package:mobile_retali/models/itinerary_models.dart';
 import 'package:mobile_retali/screens/itinerary/itinerary_widgets.dart';
@@ -549,7 +549,7 @@ class _DaysTabBarState extends State<_DaysTabBar> {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        splashColor: const Color(0xFF842D62).withValues(alpha: 0.15),
+        splashColor: const Color(0xFF1B3167).withValues(alpha: 0.15),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOut,
@@ -558,7 +558,7 @@ class _DaysTabBarState extends State<_DaysTabBar> {
           decoration: BoxDecoration(
             gradient: isSelected
                 ? const LinearGradient(
-                    colors: [Color(0xFF842D62), Color(0xFF5C1C3B)],
+                    colors: [Color(0xFF1B3167), Color(0xFF0D1523)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   )
@@ -574,7 +574,7 @@ class _DaysTabBarState extends State<_DaysTabBar> {
             boxShadow: [
               if (isSelected)
                 BoxShadow(
-                  color: const Color(0xFF842D62).withValues(alpha: 0.35),
+                  color: const Color(0xFF1B3167).withValues(alpha: 0.35),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 )
@@ -604,7 +604,7 @@ class _DaysTabBarState extends State<_DaysTabBar> {
                       decoration: BoxDecoration(
                         color: isSelected
                             ? Colors.white.withValues(alpha: 0.22)
-                            : const Color(0xFF842D62).withValues(alpha: 0.08),
+                            : const Color(0xFF1B3167).withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -614,7 +614,7 @@ class _DaysTabBarState extends State<_DaysTabBar> {
                           fontWeight: FontWeight.bold,
                           color: isSelected
                               ? Colors.white
-                              : const Color(0xFF842D62),
+                              : const Color(0xFF1B3167),
                           letterSpacing: 0.2,
                         ),
                       ),
@@ -643,7 +643,7 @@ class _DaysTabBarState extends State<_DaysTabBar> {
                       size: 13,
                       color: isSelected
                           ? const Color(0xFFFDE047)
-                          : const Color(0xFF842D62),
+                          : const Color(0xFF1B3167),
                     ),
                     const SizedBox(width: 4),
                     ConstrainedBox(

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../services/tugas_service.dart';
@@ -64,7 +64,7 @@ class _ChecklistDetailScreenState extends State<ChecklistDetailScreen> {
             onPressed: () => Navigator.pop(context, _hasChanges),
           ),
           foregroundColor: Colors.white,
-          backgroundColor: const Color(0xFF842D62),
+          backgroundColor: const Color(0xFF1B3167),
           iconTheme: const IconThemeData(color: Colors.white),
           centerTitle: true,
           elevation: 0,
@@ -79,7 +79,7 @@ class _ChecklistDetailScreenState extends State<ChecklistDetailScreen> {
                   children: [
                     const CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        Color(0xFF842D62),
+                        Color(0xFF1B3167),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -131,7 +131,7 @@ class _ChecklistDetailScreenState extends State<ChecklistDetailScreen> {
                           });
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF842D62),
+                          backgroundColor: const Color(0xFF1B3167),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -540,14 +540,14 @@ class _ChecklistDetailScreenState extends State<ChecklistDetailScreen> {
       height: 52,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF842D62), Color(0xFF9C3A6B)],
+          colors: [Color(0xFF1B3167), Color(0xFF9C3A6B)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF842D62).withValues(alpha: 0.35),
+            color: const Color(0xFF1B3167).withValues(alpha: 0.35),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

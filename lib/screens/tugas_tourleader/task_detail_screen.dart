@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -221,7 +221,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               title,
               style: const TextStyle(fontSize: 16),
             ),
-            backgroundColor: const Color(0xFF842D62),
+            backgroundColor: const Color(0xFF1B3167),
             foregroundColor: Colors.white,
           ),
           floatingActionButton: canSubmit && !_submitting
@@ -229,7 +229,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 onPressed: _submit,
                 icon: const Icon(Icons.check_circle_rounded),
                 label: const Text('Selesaikan Tugas'),
-                backgroundColor: const Color(0xFF842D62),
+                backgroundColor: const Color(0xFF1B3167),
                 foregroundColor: Colors.white, // ⬅️ INI KUNCINYA
             )
               : null,
@@ -240,8 +240,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color(0xFFF8F4F7),
-                  Color(0xFFF0E8EF),
+                  Color(0xFFF8FAFC),
+                  Color(0xFFEEF2F6),
                 ],
               ),
             ),
@@ -259,7 +259,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       children: [
                         const Icon(
                           Icons.checklist_rtl_rounded,
-                          color: Color(0xFF842D62),
+                          color: Color(0xFF1B3167),
                           size: 16,
                         ),
                         const SizedBox(width: 8),
@@ -268,7 +268,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             'Progress: ${_checked.where((c) => c).length}/${_checked.length}',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF842D62),
+                              color: Color(0xFF1B3167),
                             ),
                           ),
                         ),
@@ -287,7 +287,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                               _checked.length
                           : 0,
                       backgroundColor: Colors.grey[300],
-                      color: const Color(0xFF842D62),
+                      color: const Color(0xFF1B3167),
                       minHeight: 6,
                     ),
                   ),
@@ -380,9 +380,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }) {
     return Material(
       color: selected
-          ? const Color(0xFF842D62)
+          ? const Color(0xFF1B3167)
           : primary
-              ? const Color(0xFF842D62).withOpacity(0.1)
+              ? const Color(0xFF1B3167).withOpacity(0.1)
               : Colors.transparent,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
@@ -397,7 +397,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               color: selected
                   ? Colors.white
                   : primary
-                      ? const Color(0xFF842D62)
+                      ? const Color(0xFF1B3167)
                       : Colors.grey[700],
               fontWeight: FontWeight.w600,
             ),

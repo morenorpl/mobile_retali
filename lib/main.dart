@@ -32,15 +32,18 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Retali Mustajab Travel',
+      title: 'retali sistem Zero Complaint',
       theme: ThemeData(
         useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF842D62),
-          primary: const Color(0xFF842D62),
+          seedColor: const Color(0xFF1B3167),
+          primary: const Color(0xFF1B3167),
+          secondary: const Color(0xFFEAB308),
+          surface: Colors.white,
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF842D62),
+          backgroundColor: Color(0xFF0D1523),
           foregroundColor: Colors.white,
           elevation: 2,
           centerTitle: true,

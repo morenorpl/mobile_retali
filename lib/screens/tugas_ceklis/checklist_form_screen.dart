@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -232,7 +232,7 @@ class _ChecklistFormScreenState extends State<ChecklistFormScreen> {
             color: Colors.white,
           ),
         ),
-        backgroundColor: const Color(0xFF842D62),
+        backgroundColor: const Color(0xFF1B3167),
         elevation: 0,
         centerTitle: true,
         foregroundColor: Colors.white,
@@ -258,7 +258,7 @@ class _ChecklistFormScreenState extends State<ChecklistFormScreen> {
                   child: ElevatedButton(
                     onPressed: _canSubmit && !_loading ? _submit : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF842D62),
+                      backgroundColor: const Color(0xFF1B3167),
                       disabledBackgroundColor: Colors.grey[300],
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
@@ -325,7 +325,7 @@ class _ChecklistFormScreenState extends State<ChecklistFormScreen> {
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF842D62),
+                                  color: Color(0xFF1B3167),
                                 ),
                               ),
                             ],
@@ -337,9 +337,9 @@ class _ChecklistFormScreenState extends State<ChecklistFormScreen> {
                               value: totalQuestions > 0
                                   ? (answeredCount / totalQuestions)
                                   : 0,
-                              backgroundColor: const Color(0xFFF3E8F0),
+                              backgroundColor: const Color(0xFFF1F5F9),
                               valueColor: const AlwaysStoppedAnimation<Color>(
-                                Color(0xFF842D62),
+                                Color(0xFF1B3167),
                               ),
                               minHeight: 6,
                             ),
@@ -459,7 +459,7 @@ class _QuestionCard extends StatelessWidget {
                 height: 28,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF842D62),
+                  color: const Color(0xFF1B3167),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -533,7 +533,7 @@ class _QuestionCard extends StatelessWidget {
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: const BorderSide(
-                    color: Color(0xFF842D62),
+                    color: Color(0xFF1B3167),
                     width: 2,
                   ),
                 ),

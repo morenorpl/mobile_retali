@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
 import '../../services/tugas_service.dart';
@@ -118,7 +118,7 @@ class _TugasScreenState extends State<TugasScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: const Color(0xFF842D62),
+        backgroundColor: const Color(0xFF1B3167),
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
@@ -135,13 +135,13 @@ class _TugasScreenState extends State<TugasScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFF8F4F7),
-              Color(0xFFF0E8EF),
+              Color(0xFFF8FAFC),
+              Color(0xFFEEF2F6),
             ],
           ),
         ),
         child: RefreshIndicator(
-          color: const Color(0xFF842D62),
+          color: const Color(0xFF1B3167),
           onRefresh: _reload,
           child: FutureBuilder<List<TaskSummary>>(
             future: _future,
@@ -152,7 +152,7 @@ class _TugasScreenState extends State<TugasScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF842D62)),
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1B3167)),
                       ),
                       SizedBox(height: 16),
                       Text(
@@ -314,12 +314,12 @@ class _TaskCard extends StatelessWidget {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF842D62).withOpacity(0.1),
+                      color: const Color(0xFF1B3167).withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.assignment_rounded,
-                      color: Color(0xFF842D62),
+                      color: Color(0xFF1B3167),
                       size: 20,
                     ),
                   ),
@@ -385,7 +385,7 @@ class _TaskCard extends StatelessWidget {
                         fontWeight: FontWeight.w600, fontSize: 15),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF842D62),
+                    backgroundColor: const Color(0xFF1B3167),
                     foregroundColor: Colors.white,
                     minimumSize: const Size.fromHeight(48),
                     shape: RoundedRectangleBorder(
@@ -439,7 +439,7 @@ class _TaskCard extends StatelessWidget {
         Icon(
           icon,
           size: 18,
-          color: isCompleted ? Colors.green : const Color(0xFF842D62).withOpacity(0.7),
+          color: isCompleted ? Colors.green : const Color(0xFF1B3167).withOpacity(0.7),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -468,7 +468,7 @@ class _TaskCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: const Color(0xFFF8F4F7),
+            color: const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
@@ -476,7 +476,7 @@ class _TaskCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF842D62),
+              color: Color(0xFF1B3167),
             ),
           ),
         ),
