@@ -103,6 +103,8 @@ void main() {
       expect(find.text('Foto Bukti Kehadiran'), findsOneWidget);
       expect(find.text('Koordinat GPS Lokasi'), findsOneWidget);
       expect(find.text('Kirim & Simpan Absensi'), findsOneWidget);
+      // Memastikan input catatan petugas sudah dihilangkan
+      expect(find.text('Catatan Petugas (Opsional):'), findsNothing);
     });
   });
 }

@@ -33,7 +33,6 @@ class _AbsensiFormScreenState extends State<AbsensiFormScreen> {
   bool _locationLoading = false;
   String _selectedType = 'masuk'; // 'masuk', 'tugas', 'izin', 'sakit'
   String? _selectedBagian;
-  final TextEditingController _noteCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -42,12 +41,6 @@ class _AbsensiFormScreenState extends State<AbsensiFormScreen> {
       _selectedBagian = widget.sesi.bagianSesi.first.namaBagian;
     }
     _prepareLocation();
-  }
-
-  @override
-  void dispose() {
-    _noteCtrl.dispose();
-    super.dispose();
   }
 
   Future<void> _prepareLocation() async {
@@ -156,7 +149,6 @@ class _AbsensiFormScreenState extends State<AbsensiFormScreen> {
         targetJamSelesai: widget.sesi.targetJamSelesai,
         kloter: widget.kloter,
         type: _selectedType,
-        note: _noteCtrl.text.trim(),
         lat: _lat,
         lng: _lng,
         pickedFile: _pickedFile,
@@ -646,50 +638,6 @@ class _AbsensiFormScreenState extends State<AbsensiFormScreen> {
                           ),
                         ],
                       ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // 📝 CATATAN TAMBAHAN (OPSIONAL)
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Catatan Petugas (Opsional):',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF333333),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _noteCtrl,
-                      maxLines: 2,
-                      decoration: InputDecoration(
-                        hintText: 'Contoh: Rombongan bus 1 lengkap, kondisi lancar...',
-                        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                        filled: true,
-                        fillColor: const Color(0xFFF8F5F8),
-                        contentPadding: const EdgeInsets.all(12),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
