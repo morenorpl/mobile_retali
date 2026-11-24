@@ -45,7 +45,9 @@ flutter:
 
   assets:
     - assets/LogoZero.png
+    - assets/LogoZeroWhite.png
     - assets/LogoRetali.png
+    - assets/logoretali-kuning.png
 
     - assets/home/absensi_jamaah.png
     - assets/home/al quran.png
@@ -79,4 +81,4 @@ flutter:
 flutter_icons:
   android: true
   ios: true
-  image_path: assets/icon/LogoRetali.png
+  image_path: assets/icon/logoretali-kuning.png

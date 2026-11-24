@@ -295,19 +295,15 @@ class _LoginScreenState extends State<LoginScreen>
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Container(
-                                      width: 120,
-                                      height: 120,
+                                      width: 150,
+                                      height: 150,
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: Colors.white,
+                                        color: Color.fromARGB(0, 255, 255, 0),
                                         shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: const Color(0xFFEAB308),
-                                          width: 2.5,
-                                        ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: const Color(0xFFEAB308).withValues(alpha: 0.4),
+                                            color: const Color(0xFFEAB308).withValues(alpha: 0.25),
                                             blurRadius: 22,
                                             spreadRadius: 2,
                                             offset: const Offset(0, 4),
@@ -322,7 +318,7 @@ class _LoginScreenState extends State<LoginScreen>
                                       child: Hero(
                                         tag: 'logo',
                                         child: Image.asset(
-                                          'assets/LogoZero.png',
+                                          'assets/LogoZeroWhite.png',
                                           fit: BoxFit.contain,
                                         ),
                                       ),

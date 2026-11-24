@@ -1576,7 +1576,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       ),
                     ),
                     child: const Icon(
-                      Icons.help_outline_rounded,
+                      Icons.info_outline_rounded,
                       color: Colors.white,
                       size: 18,
                     ),

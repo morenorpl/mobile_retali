@@ -206,7 +206,7 @@ class _DualClockBannerState extends State<DualClockBanner> {
                                   FittedBox(
                                     fit: BoxFit.scaleDown,
                                     child: Text(
-                                      arabHourArabic,
+                                      arabHour,
                                       style: const TextStyle(
                                         color: Color(0xFFEAB308),
                                         fontSize: 23,

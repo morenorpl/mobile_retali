@@ -414,7 +414,7 @@ class _SplashScreenState extends State<SplashScreen>
                               height: 135,
                               padding: const EdgeInsets.all(10),
                               child: Image.asset(
-                                'assets/LogoRetali.png',
+                                'assets/logoretali-kuning.png',
                                 fit: BoxFit.contain,
                               ),
                             ),
