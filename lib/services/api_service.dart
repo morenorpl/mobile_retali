@@ -102,6 +102,7 @@ class ApiService {
 
     // 4. Bersihkan seluruh session & data lokal
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_logged_in', false);
     await prefs.clear();
   }
 
@@ -156,6 +157,7 @@ class ApiService {
       await prefs.setString("kloter_id", kloterId.toString());
     }
     await prefs.setString("kloter_tanggal", kloterTanggal.toString());
+    await prefs.setBool("is_logged_in", true);
   }
 
   // =====================

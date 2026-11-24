@@ -14,14 +14,6 @@ class _DualClockBannerState extends State<DualClockBanner> {
   late Timer _timer;
   DateTime _now = DateTime.now();
 
-  // 🔢 Fungsi ubah angka Latin ke angka Arab
-  String _toArabicNumber(String input) {
-    const arabicDigits = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
-    return input.replaceAllMapped(RegExp(r'[0-9]'),
-        (match) => arabicDigits[int.parse(match.group(0)!)]
-    );
-  }
-
   @override
   void initState() {
     super.initState();
@@ -52,10 +44,9 @@ class _DualClockBannerState extends State<DualClockBanner> {
     // Format jam
     final jakartaHour = DateFormat('HH:mm:ss').format(jakartaTime);
     final arabHour = DateFormat('HH:mm:ss').format(arabTime);
-    final arabHourArabic = _toArabicNumber(arabHour);
 
     return Container(
-      height: 136,
+      height: 142,
       width: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
@@ -122,7 +113,7 @@ class _DualClockBannerState extends State<DualClockBanner> {
                                     "JAKARTA",
                                     style: TextStyle(
                                       color: Colors.white.withValues(alpha: 0.85),
-                                      fontSize: 11,
+                                      fontSize: 12.5,
                                       fontWeight: FontWeight.w600,
                                       letterSpacing: 1.2,
                                     ),
@@ -136,7 +127,7 @@ class _DualClockBannerState extends State<DualClockBanner> {
                                       jakartaHour,
                                       style: const TextStyle(
                                         color: Colors.white,
-                                        fontSize: 23,
+                                        fontSize: 25,
                                         fontWeight: FontWeight.w800,
                                         letterSpacing: 0.8,
                                       ),
@@ -158,7 +149,7 @@ class _DualClockBannerState extends State<DualClockBanner> {
                                       "WIB (UTC+7)",
                                       style: TextStyle(
                                         color: Colors.white.withValues(alpha: 0.75),
-                                        fontSize: 10,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
@@ -195,7 +186,7 @@ class _DualClockBannerState extends State<DualClockBanner> {
                                     "ARAB SAUDI",
                                     style: TextStyle(
                                       color: Color(0xFFEAB308),
-                                      fontSize: 11,
+                                      fontSize: 12.5,
                                       fontWeight: FontWeight.w600,
                                       letterSpacing: 1.2,
                                     ),
@@ -209,7 +200,7 @@ class _DualClockBannerState extends State<DualClockBanner> {
                                       arabHour,
                                       style: const TextStyle(
                                         color: Color(0xFFEAB308),
-                                        fontSize: 23,
+                                        fontSize: 25,
                                         fontWeight: FontWeight.w800,
                                         letterSpacing: 0.8,
                                       ),
@@ -231,7 +222,7 @@ class _DualClockBannerState extends State<DualClockBanner> {
                                       "WSA (UTC+3)",
                                       style: TextStyle(
                                         color: const Color(0xFFEAB308).withValues(alpha: 0.9),
-                                        fontSize: 10,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
@@ -275,7 +266,7 @@ class _DualClockBannerState extends State<DualClockBanner> {
                               indoDate,
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.85),
-                                fontSize: 11.5,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w500,
                                 letterSpacing: 0.3,
                               ),

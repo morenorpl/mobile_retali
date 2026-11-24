@@ -217,7 +217,7 @@ class _RunningNotificationBarState extends State<RunningNotificationBar>
                     _unreadCount > 99 ? '99+' : '$_unreadCount',
                     style: const TextStyle(
                       color: Color(0xFF0D1523),
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.w800,
                       height: 1.1,
                     ),
@@ -246,7 +246,7 @@ class _RunningNotificationBarState extends State<RunningNotificationBar>
                   text: _currentText,
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.95),
-                    fontSize: 12.5,
+                    fontSize: 14,
                     fontWeight: FontWeight.w500,
                     letterSpacing: 0.2,
                   ),

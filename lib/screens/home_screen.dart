@@ -220,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(
                             "Assalamualaikum, ${_name.isNotEmpty ? _name : 'User'}!",
                             style: const TextStyle(
-                              fontSize: 21,
+                              fontSize: 22.5,
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
                               letterSpacing: -0.2,
@@ -272,7 +272,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Text(
                                   _roleDisplay,
                                   style: const TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 13.5,
                                     fontWeight: FontWeight.w700,
                                     color: accentGold,
                                     letterSpacing: 0.3,
@@ -352,7 +352,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       _unreadCount > 99 ? '99+' : '$_unreadCount',
                                       style: const TextStyle(
                                         color: Colors.white,
-                                        fontSize: 9,
+                                        fontSize: 10.5,
                                         fontWeight: FontWeight.w800,
                                         height: 1.0,
                                       ),
@@ -501,7 +501,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             const Text(
                               "Menu Layanan",
                               style: TextStyle(
-                                fontSize: 17.5,
+                                fontSize: 19,
                                 fontWeight: FontWeight.w800,
                                 color: textPrimary,
                                 letterSpacing: -0.2,
@@ -521,7 +521,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Text(
                             "${menus.length} Layanan",
                             style: const TextStyle(
-                              fontSize: 12,
+                              fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: primaryNavy,
                             ),
@@ -540,7 +540,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisCount: 4,
                         crossAxisSpacing: 10,
                         mainAxisSpacing: 10,
-                        childAspectRatio: 0.80,
+                        childAspectRatio: 0.76,
                       ),
                       itemCount: menus.length,
                       itemBuilder: (context, index) {
@@ -599,7 +599,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 12.5,
                 fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
                 color: labelColor,
                 letterSpacing: 0.2,
@@ -882,7 +882,7 @@ class MenuItemWidget extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF0F172A),
                     height: 1.2,

@@ -7,6 +7,7 @@ import 'screens/login_screen.dart';
 import 'services/api_service.dart';
 import 'services/notification_service.dart';
 import 'services/presence_service.dart';
+import 'services/supabase_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -116,8 +117,22 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 2400));
 
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+    final bool isLoggedInFlag = prefs.getBool('is_logged_in') ?? false;
+    String? token = prefs.getString('token');
+    final String? sessionToken = prefs.getString('session_token');
+    final String? email = prefs.getString('email');
+    final String? userId = prefs.getString('user_id') ?? prefs.getString('id');
     final role = (prefs.getString('role') ?? '').toLowerCase().replaceAll('_', '').trim();
+
+    // Periksa apakah Supabase memiliki sesi aktif
+    final supaSession = SupabaseService.client?.auth.currentSession;
+    final supaUser = SupabaseService.client?.auth.currentUser;
+
+    final currentAccessToken = supaSession?.accessToken;
+    if ((token == null || token.trim().isEmpty) && currentAccessToken != null) {
+      token = currentAccessToken;
+      await prefs.setString('token', currentAccessToken);
+    }
 
     if (!mounted) return;
 
@@ -134,25 +149,53 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
-    if (token != null && token.isNotEmpty) {
-      NotificationService.setupSupabaseRealtime();
-      NotificationService.checkAndTriggerPendingNotifications();
-      PresenceService.start();
+    // Indikasi apakah user pernah login sebelumnya
+    final bool hasEverLoggedIn = isLoggedInFlag ||
+        (token != null && token.trim().isNotEmpty) ||
+        (sessionToken != null && sessionToken.trim().isNotEmpty) ||
+        (supaUser != null) ||
+        (email != null && email.trim().isNotEmpty && email.trim() != '-') ||
+        (userId != null && userId.trim().isNotEmpty && userId.trim() != '-');
 
+    if (hasEverLoggedIn) {
+      // Pastikan status login tersimpan
+      await prefs.setBool('is_logged_in', true);
+      if (token == null || token.trim().isEmpty) {
+        final fallbackToken = sessionToken ?? supaSession?.accessToken ?? 'session_active_${userId ?? email}';
+        await prefs.setString('token', fallbackToken);
+      }
+
+      try {
+        NotificationService.setupSupabaseRealtime();
+        NotificationService.checkAndTriggerPendingNotifications();
+      } catch (e) {
+        debugPrint('⚠️ [SplashScreen] Error setup notifications: $e');
+      }
+
+      try {
+        PresenceService.start();
+      } catch (e) {
+        debugPrint('⚠️ [SplashScreen] Error start presence: $e');
+      }
+
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => const HomeScreen(),
         ),
       );
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const LoginScreen(),
-        ),
-      );
+      return;
     }
+
+    // Jika belum pernah login, arahkan ke login screen
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const LoginScreen(),
+      ),
+    );
   }
 
   @override
@@ -483,7 +526,7 @@ class _SplashScreenState extends State<SplashScreen>
                                 textAlign: TextAlign.center,
                                 text: const TextSpan(
                                   style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 15.5,
                                     fontWeight: FontWeight.w600,
                                     letterSpacing: 3.5,
                                   ),
@@ -512,7 +555,7 @@ class _SplashScreenState extends State<SplashScreen>
                                 "Zero Complaint",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  fontSize: 30,
+                                  fontSize: 32,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
                                   letterSpacing: 1.0,
@@ -552,7 +595,7 @@ class _SplashScreenState extends State<SplashScreen>
                                   "UMRAH TRAVEL MANAGEMENT",
                                   style: TextStyle(
                                     color: Color(0xFF94A3B8),
-                                    fontSize: 10.5,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     letterSpacing: 2.0,
                                   ),
@@ -580,7 +623,7 @@ class _SplashScreenState extends State<SplashScreen>
                         "Memuat sistem...",
                         style: TextStyle(
                           color: Color(0xFF64748B),
-                          fontSize: 11.5,
+                          fontSize: 13,
                           letterSpacing: 1.5,
                           fontWeight: FontWeight.w500,
                         ),
@@ -603,7 +646,7 @@ class _SplashScreenState extends State<SplashScreen>
                               "Amanah • Khidmat • Profesional",
                               style: TextStyle(
                                 color: Color(0xFF64748B),
-                                fontSize: 11,
+                                fontSize: 12.5,
                                 letterSpacing: 1.2,
                                 fontWeight: FontWeight.w500,
                               ),

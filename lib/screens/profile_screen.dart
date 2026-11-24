@@ -200,7 +200,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text(
                   label,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF64748B),
                     letterSpacing: 0.2,
@@ -210,7 +210,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text(
                   value,
                   style: const TextStyle(
-                    fontSize: 15,
+                    fontSize: 16.5,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF0F172A),
                   ),
@@ -401,7 +401,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         "Profil Saya",
                                         style: TextStyle(
                                           color: Colors.white,
-                                          fontSize: 18,
+                                          fontSize: 20,
                                           fontWeight: FontWeight.w800,
                                           letterSpacing: 0.3,
                                         ),
@@ -414,7 +414,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     "Tour Leader & Muthawif Management",
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.7),
-                                      fontSize: 12.5,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w400,
                                       letterSpacing: 0.2,
                                     ),
@@ -518,7 +518,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         userName,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontSize: 22,
+                          fontSize: 24,
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF0F172A),
                           letterSpacing: 0.2,
@@ -550,7 +550,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Text(
                               roleLabel,
                               style: const TextStyle(
-                                fontSize: 12.5,
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFF1B3167),
                                 letterSpacing: 0.3,
@@ -732,7 +732,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     Text(
                                       "Keluar dari Aplikasi",
                                       style: TextStyle(
-                                        fontSize: 15,
+                                        fontSize: 16.5,
                                         fontWeight: FontWeight.w700,
                                         color: Color(0xFFEF4444),
                                       ),

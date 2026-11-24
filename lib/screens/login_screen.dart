@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
 import '../services/presence_service.dart';
@@ -131,10 +132,14 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _loading = false);
 
     if (result['success'] == true) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_logged_in', true);
+
       NotificationService.setupSupabaseRealtime();
       NotificationService.checkAndTriggerPendingNotifications();
       PresenceService.start();
 
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -155,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen>
       hintText: hint,
       hintStyle: const TextStyle(
         color: Color(0xFF94A3B8),
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: FontWeight.w400,
       ),
       prefixIcon: Padding(
@@ -352,7 +357,7 @@ class _LoginScreenState extends State<LoginScreen>
                                           RichText(
                                             text: const TextSpan(
                                               style: TextStyle(
-                                                fontSize: 12,
+                                                fontSize: 13.5,
                                                 fontWeight: FontWeight.w700,
                                                 letterSpacing: 1.2,
                                               ),
@@ -421,7 +426,7 @@ class _LoginScreenState extends State<LoginScreen>
                           const Text(
                             "Selamat Datang",
                             style: TextStyle(
-                              fontSize: 26,
+                              fontSize: 28,
                               fontWeight: FontWeight.w800,
                               color: Color(0xFF0F172A),
                               letterSpacing: -0.5,
@@ -431,7 +436,7 @@ class _LoginScreenState extends State<LoginScreen>
                           const Text(
                             "Silahkan masukkan akun anda",
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 15.5,
                               fontWeight: FontWeight.w400,
                               color: Color(0xFF64748B),
                             ),
@@ -468,7 +473,7 @@ class _LoginScreenState extends State<LoginScreen>
                                       _errorMessage!,
                                       style: const TextStyle(
                                         color: Color(0xFFB91C1C),
-                                        fontSize: 13,
+                                        fontSize: 14,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
@@ -492,7 +497,7 @@ class _LoginScreenState extends State<LoginScreen>
                           const Text(
                             "Email Petugas",
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 14.5,
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF263754),
                             ),
@@ -502,7 +507,7 @@ class _LoginScreenState extends State<LoginScreen>
                             controller: _emailC,
                             keyboardType: TextInputType.emailAddress,
                             style: const TextStyle(
-                              fontSize: 15,
+                              fontSize: 16,
                               fontWeight: FontWeight.w500,
                               color: Color(0xFF0F172A),
                             ),
@@ -523,7 +528,7 @@ class _LoginScreenState extends State<LoginScreen>
                           const Text(
                             "Password",
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 14.5,
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF263754),
                             ),
@@ -533,7 +538,7 @@ class _LoginScreenState extends State<LoginScreen>
                             controller: _passC,
                             obscureText: _obscurePassword,
                             style: const TextStyle(
-                              fontSize: 15,
+                              fontSize: 16,
                               fontWeight: FontWeight.w500,
                               color: Color(0xFF0F172A),
                             ),
@@ -616,7 +621,7 @@ class _LoginScreenState extends State<LoginScreen>
                                         Text(
                                           "Masuk",
                                           style: TextStyle(
-                                            fontSize: 16,
+                                            fontSize: 17.5,
                                             fontWeight: FontWeight.w700,
                                             color: Colors.white,
                                             letterSpacing: 0.5,
@@ -654,7 +659,7 @@ class _LoginScreenState extends State<LoginScreen>
                                       child: RichText(
                                         text: const TextSpan(
                                           style: TextStyle(
-                                            fontSize: 12.5,
+                                            fontSize: 14,
                                             letterSpacing: 1.8,
                                           ),
                                           children: [
@@ -688,7 +693,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   "Zero Complaint",
                                   style: TextStyle(
                                     color: Color(0xFF0F172A),
-                                    fontSize: 15,
+                                    fontSize: 16.5,
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: 0.8,
                                   ),
@@ -698,7 +703,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   "Umrah Travel Management",
                                   style: TextStyle(
                                     color: Color(0xFF94A3B8),
-                                    fontSize: 11,
+                                    fontSize: 12.5,
                                     fontWeight: FontWeight.w400,
                                     letterSpacing: 0.3,
                                   ),
